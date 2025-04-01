@@ -119,6 +119,8 @@ Run `sudo systemctl start elasticsearch` and wait a lil for the command to compl
 
 Congratulations, we just set up Elasticsearch and can confirm that a cluster is up and running. 9200 is where we will send all of our logged data to; from Beats or Elastic Agents if you go down that route. Our next step is setting up Kibana in the same manner.
 
+If you ever want to edit the `elasticsearch.yml` configuration on your own time, <strong>you will need to run `sudo systemctl restart elasticsearch.service` so that the updated configuarion is read by Elasticsearch.</strong>
+
 # Configuring Kibana
 To be continued...
 
