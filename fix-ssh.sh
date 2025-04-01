@@ -1,3 +1,5 @@
+#!/bin/bash
+# super duper epic script to reinstall OpenSSH if it is broken/not installed/broken to an unimaginable degree
 echo "PLEASE READ: Run this scripts only after having checked to see if SSH is actually broken and/or systemctl shows SSH is not found!"
 echo "Updating and cleaning things up!"
 sudo apt update && sudo apt upgrade && sudo apt autoremove
