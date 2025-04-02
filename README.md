@@ -15,7 +15,7 @@ This guide is aimed to be very step-by-step oriented; I guide you through everyt
 
 # SIEM Features
 <strong>Basic features</strong> should include:
-- Log ingestion (mainly network-related logs and OS log data for initial testing. Beats and/or Logstash can be used for ingest.)
+- Log ingestion (mainly network-related logs and OS log data for initial testing. Beats can be used for ingest.)
 - Log parsing/querying (KQL can easily query for us + Beats for basic parsing.)
 - Dashboards (Kibana duh)
 - Alerts (Achieved inside the actual SIEM UI)
@@ -97,12 +97,12 @@ Run `wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-ke
 
 Success! Update our packages then install elasticsearch. Run `sudo apt update -y && sudo apt install elasticsearch -y`.
 
-Now that elasticsearch is hopefully downloaded, we need to reload all running daemons and services on our VM. Since we are adding a new daemon (elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for elasticsearch, we will be modifying our configuration files.
+Now that elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new daemon (elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for elasticsearch, we will be modifying our configuration files.
 
 We will want to confirm that elasticsearch is actually on our system, so run `sudo systemctl status elasticsearch.service`, we preferably want to see a 'dead' process.
 ![Yes I did a typo.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-success.png)
 
-Real talk, I included that typo so you know that I am human just like you. Creating this guide is both for my learning and so you can get a lovely homelab setup to enjoy cybersec :) We are officially finished the installation phase for elasticsearch and will now get to configuring it.
+Real talk, I included that typo to show that I am human just like you. Creating this guide is both for my learning and so you can get a lovely homelab setup to enjoy cybersec :) With that being said, we are officially finished the installation phase for elasticsearch and will now get to configuring it.
 
 # Configuring Elasticsearch and Running the Cluster
 This step is entirely for configuring elasticsearch; telling it how to run, what ports it needs, communication, etc.
@@ -112,9 +112,9 @@ Open `/etc/elasticsearch/elasticsearch.yml` in a text editor (neovim da goat). I
 
 Continue editing the file. The `network.host` property will be our VM's IP address. The `http.port` property will be left alone, but make sure to uncomment it, and lastly, add the `discovery.type` property (this property tells Elasticsearch how it should form a cluster). <strong>Do not forget the colon next to the property name!</strong> 
 
-Once we are done, go ahead and close the YML file. Congrats, our config work here is done (temporarily)! We can now go ahead and start the `elastsearch.,service` service, then check the JSON output of elasticsearch at our IP address + HTTP port--you'll see what I mean :)
+Once we are done, go ahead and close the YML file. Congrats, our config work here is done (temporarily)! We can now go ahead and start the `elasticsearch.service` service, then check the JSON output of elasticsearch at our IP address + HTTP port--you'll see what I mean :)
 
-Run `sudo systemctl start elasticsearch` and wait a lil for the command to complete. We can also run `sudo systemctl enable elasticsearch` to automatically start the service on boot of our VM, but we don't need that. Once the command completes, run `curl --get http://NETWORK_HOST_IP:9200`. NETWORK_HOST_IP is the network.host IP we have in our config file!
+Run `sudo systemctl start elasticsearch` and wait a lil for the command to complete. We can also run `sudo systemctl enable elasticsearch` to automatically start the service on boot of our VM, if you wish. Once the command completes, run `curl --get http://NETWORK_HOST_IP:9200`. NETWORK_HOST_IP is the network.host IP we have in our config file!
 ![We got something!!!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-curl-success.png)
 
 Congratulations, we just set up Elasticsearch and can confirm that a cluster is up and running. 9200 is where we will send all of our logged data to; from Beats or Elastic Agents if you go down that route. Our next step is setting up Kibana in the same manner.
