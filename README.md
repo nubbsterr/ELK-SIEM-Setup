@@ -13,7 +13,13 @@ As stated above, there are many sources I consulted, all of which will be linked
 
 This guide is aimed to be very step-by-step oriented; I guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32.
 
-Lastly, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. If you would like to contribute to this repo, feel free to message me or make a PR to the repo!
+Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. 
+
+Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH and lots of `sudo` and (potentially) command-line text editors. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
+1. Voiced to me. Yes, you can message me on Discord or via email. 
+2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s).
+
+With that being siad, if you would like to contribute to this repo, feel free to message me or make a PR to the repo!
 
 # SIEM Features
 <strong>Basic features</strong> should include:
@@ -188,11 +194,28 @@ With that being said, we're done here! To shut everything down, run:
 
 If you aren't leaving, then we'll get going to the next step; establishing a CA.
 
-# Creating a CA
+# Intermission: Establishing Elastic component IPs and Understanding CAs
+Our first step with making a CA is to understand why we are doing it. We are making a CA so we can implement TLS, thus HTTPS into our Elastic components, and that requires certificates.
+
+Firstly, we need to specify the instances of our services so we can later grant them a certificate. Navigate to `/usr/share/elasticsearch` and create a file called `instances.yml` by running `sudo touch instances.yml` and then opening it in a text editor. This file will hold information regarding what Elastic components we are using and their host IPs.
+![Creating the file in the directory.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/creating-instances-yml.png)
+
+Great stuff, let's add the following text that I will not copy because it is too tiresome:
+![instances.yml configuration.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/instances-yml-config.png)
+
+Replace the `10.0.2.15` with your appropriate host IP. You may be wondering what that `fleet` service is; it is for managing your fleet of Elastic Agents, which themselves collect all sorts of information past log data. Simply put, they are fundamental if you wish to set up Elastic Agents later down the line.
+
+Save the file and exit our text editor. Our next step is to literally create a PKI (Public Key Infrastructure) for ourselves. To do so, we will need keys and certificates, and of course, a certificate authority, which we will make using Elasticsearch's utilities.
+
+# Creating the CA and Generating Certificates
 To be continued...
 
-# Setting up the Attack: Windows Setup
+# Setting up the Attack: Windows Setup and Kill Chain Diagram
+<strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info. (This is a note for myself, don't worry about it my gamer)
+
+Will create Kill Chain diagram of attack in detail once this step is reached. Potential privilege escalation attempt in the attack as well on Windows; potentially w/ Windows Credential Manager and `cmdkey /list` 'vulnerability.'
 
 # Sources
 - [Official Elastic Docs on upgrading Elastic components. Highly recommend you consult both this and other sources if you wish to upgrade your lab.](https://www.elastic.co/guide/en/elastic-stack/current/upgrading-elastic-stack.html)
