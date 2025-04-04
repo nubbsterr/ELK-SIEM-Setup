@@ -7,13 +7,13 @@ Given that this is still being developed, nothing is final. If you are going ste
 That is all :)
 
 # Preface
-<strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the ELK stack.
+<strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the Elastic 'technologies'.
 
-As stated above, there are many sources I consulted, all of which will be linked below for your own reading. The following will be a step-by-step guide of me <strong>creating my own SIEM</strong> using Oracle VirtualBox and namely Elastissearch and Kibana for indexing/analyzing and visualizing our log data respectively.
+As stated above, there are many sources I consulted, all of which will be linked below for your own reading. The following will be a step-by-step guide of me <strong>creating my own SIEM</strong> using Oracle VirtualBox and namely Elastissearch, Beats and Kibana for indexing/analyzing, ingesting and visualizing our log data respectively.
 
 This guide is aimed to be very step-by-step oriented; I guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32.
 
-Lastly, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. If you would like to contribute to this repo, feel free to message me or make a PR to the repo!
+Lastly, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. If you would like to contribute to this repo, feel free to message me or make a PR to the repo!
 
 # SIEM Features
 <strong>Basic features</strong> should include:
@@ -79,7 +79,7 @@ Fun fact, we can't just SSH and magically run on our VM. No, that'd be too easy.
 To achieve this, I created this rule by going to the `Settings` tab in VirtualBox and going to `Network` then `Port Forwarding`. ![Networking Page](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/network-settings.png).
 
 From here, I make the following Port Forwarding rule:
-![](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/forwarding-rule.png)
+![Port forwarding in VirtualBox.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/forwarding-rule.png)
 What this basically means is that whenever I send a TCP request to port 2222 on my machine, regardless of the IP used to specify the host, it will be forwarded to port 22 on the Guest IP, which is our DHCP IP address from before. <strong>You can (and should) change the Host IP value to something that isn't blank since that will allow any machine to access the VM effectively. You can specify 127.0.0.1 for the Host IP to only allow localhost/your machine to access the VM.</strong>
 
 Moment of truth, we should be able to `ssh` given any IP address and on port 2222. Run `ssh -p 2222 SERVER_USERNAME@127.0.0.1` and hope for the best!
@@ -149,11 +149,57 @@ Kibana and Elasticsearch are now up and running and all that's left is Beats for
 If you're closing down like me for the night, you can run `sudo systemctl stop kibana` and `sudo systemctl stop elasticsearch` <strong>in that order</strong> to safely close down our active services :)
 
 # Configuring Filebeat
+Install filebeat by running `sudo apt install filebeat -y`. As seen withboth Kibana and Elasticsearch, we will need to edit filebeat's YML file; `/etc/filebeat/filebeat.yml`, which I will go ahead and open with vim as I have been doing thus far.
+
+Here's where things get interesting for us. We can add a TON of different inputs for filebeat, ranging from `journald` logs to yes, `winlog input`. We can actually get Windows event logs using filebeat. Simply put, `Winlogbeat` captures far more log data with Windows operations past just logged events. Event logs are available from `winlog input` but also `Winlogbeat`. For simplicity sake, we will use filebeat instead of Winlogbeat for our mock attack, and you will see why once I get to describing the attack :)
+
+Therefore, we will make the following edits:
+1. Add a new configuration to the `filebeat.inputs` field. This `winglog` input will require Script Block Logging on our Windows machine to work effectively, but we will configure that soon enough. The event IDs 4104 (script logging), 4105 (powershell cmd executed) and 4106 (powershell cmd complete) are all going to be very nice to have assuming an attack via PowerShell! <strong>This only works for PowerShell 5.1. If PowerShell is any greater version we need to change the `name` property to `PowerShellCore/operational` in accordance to MS Documentation.</strong>
+![Winlog input to add alongside base inputs.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/winlog-config.png)
+2. Configure the Elasticsearch portion of Filebeat. Kibana's config is totally fine. All we need to do is change the IP of the Elasticsearch host.
+![Elasticsearch-Filebeat configuration.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-filebeat-config.png)
+
+That is all we need to do. Our next step is to literally set up Filebeat in the terminal. This will manage how index management w/ Elasticsearch works, on top of disabling Logstash for log ingest.
+
+Run `sudo filebeat setup --index-management -E output.logstash.enabled=false 'output.elasticsearch.hosts=["ELASTICSEARCH_HOST_IP_ADDRESS:9200"]'`. ELASTICSEARCH_HOST_IP_ADDRESS is the host IP address we chose in our elasticsearch.yml file. Index management manages how Elasticsearch goes about its indexing business, which I will not go over since that'd take 10 krillion years. `-E` overwrites specifc config settings, which we do next by 1) Disabling Logstash and 2) Ensuring we have our Elasticsearch host correctly set because why not.
+
+Once that's over we can actually start everything up in the following order if NOT ALREADY STARTED:
+1. Start Elasticsearch: `sudo systemctl start elasticsearch`
+2. Start Filebeat: `sudo systemctl start filebeat`
+3. Start Kibana: `sudo systemctl start kibana`
+![Everything looks good!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/all-services-running.png)
+
+Assuming nothing blew up, we can now run one last `curl` to actually check if Elasticsearch is getting something from Filebeat. Run `curl --get http://ELASTICSEARCH_HOST_IP_ADDRESS:9200/_cat/indices?v`. This command may look insane, but it's relatively simple:
+1. `_cat/indices` is the CAT Indices API. Simply put, it is an API that returns high level information about indices in an Elasticsearch cluster. We are making an API call with this URL.
+2. `?v` = verbose. Gives column headers to output and makes it more readable. 
+
+Now if you're a complete dumby like me, and forgot to run `sudo filebeat setup`, then we're DOOMED! Not. Just shutdown filebeat, run the setup command, and restart filebeat with the following order:
+1. `sudo systemctl stop filebeat.service`, <strong>this took a while so do NOT Ctrl+C and possibly ruin your day.</strong>
+2. `sudo filebeat setup --index-management -E output.logstash.enabled=false 'output.elasticsearch.hosts=["ELASTICSEARCH_HOST_IP_ADDRESS:9200"]'`
+3. `sudo systemctl restart filebeat.service` && `sudo systemctl status filebeat.service`
+![IT WORKS!???????????????!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/filebeat-success.png)
+
+That yellow healthcheck notice is nothing to worry about. To my knowledge, it is indicating that replica shards are unassigned, which basically means we are at risk of data loss, which we don't care about in our current state. No only that, we have no primary shards, since we have no indexed data, so <strong>we do not care.</strong>
+
+With that being said, we're done here! To shut everything down, run:
+1. `sudo systemctl stop kibana.service`
+2. `sudo systemctl stop filebeat.service`, <strong>this took a while so, once again, do NOT Ctrl+C.</strong>
+3. `sudo systemctl stop elasticsearch.service`
+
+If you aren't leaving, then we'll get going to the next step; establishing a CA.
+
+# Creating a CA
 To be continued...
+
+# Setting up the Attack: Windows Setup
+Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info. (This is a note for myself, don't worry about it my gamer)
 
 # Sources
 - [Official Elastic Docs on upgrading Elastic components. Highly recommend you consult both this and other sources if you wish to upgrade your lab.](https://www.elastic.co/guide/en/elastic-stack/current/upgrading-elastic-stack.html)
 - [Official Elastic Docs on downloading Beats but also for adding the Elastic repo w/ APT or YUM.](https://www.elastic.co/guide/en/beats/filebeat/current/setup-repositories.html)
+- [Official MS Docs on Script Block Logging and PowerShell event IDs.](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_logging?view=powershell-5.1)
+- [Official Elastic Docs on configuring winlog input for Filebeat.](https://www.elastic.co/guide/en/beats/filebeat/current/filebeat-input-winlog.html)
+- [Official Elastic Docs regarding the cat indices API.](https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cat-indices.html#cat-indices-api-request)
 - A whole lot of ChatGPT and Google Searching. It helps to know the 'why' behind what we're doing especially in cybersecurity!
 - [Massive installation and setup guide which I consulted throughout my journey](https://www.leveleffect.com/blog/how-to-set-up-your-own-home-lab-with-elk?utm_source=chatgpt.com)
 - [Consult this for VirtualBox downloads. Go straight to the wget command if you're on Ubuntu/Debian-based repos like me, or use my script to install VirtualBox lol](https://www.virtualbox.org/wiki/Linux_Downloads)
