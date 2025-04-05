@@ -15,7 +15,7 @@ This guide is aimed to be very step-by-step oriented; I guide you through everyt
 
 Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. 
 
-Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH and lots of `sudo` and (potentially) command-line text editors. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
+Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
 1. Voiced to me. Yes, you can message me on Discord or via email. 
 2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s).
 
@@ -208,18 +208,61 @@ Replace the `10.0.2.15` with your appropriate host IP. You may be wondering what
 Save the file and exit our text editor. Our next step is to literally create a PKI (Public Key Infrastructure) for ourselves. To do so, we will need keys and certificates, and of course, a certificate authority, which we will make using Elasticsearch's utilities.
 
 # Creating the CA and Generating Certificates
+Navigate to `/usr/share/elasticsearch` and run the following: `sudo /usr/share/elasticsearch/bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 1) Create a new CA and 2) Create the CA certificate and private key in PEM format, as the command output will say. <strong>Leave the option for the output file blank; simply click Enter and continue.</strong>
+![Running the command and seeing the output!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-certutil-success.png)
+
+Awesome sauce. We now have a zip file of our our CA certificate and private key. Unzip the zip folder with `sudo unzip ./elastic-stack-ca.zip`. You should have a `ca/` directory with a certificate file and private key. Our next step is to generate the certificate to sign for each of our instances.
+
+Generate the certificate with the following command: `sudo /usr/share/elasticsearch/bin/elasticsearch-certutil cert --ca-cert ca/ca.crt --ca-key ca/ca.key --pem --in instances.yml -- out cert.zip`. Let me make this shrimple to understand:
+1. We use the certutil and assign the CA certificate and private key from our unzipped files.
+2. Everything is set to the PEM format, given the `--pem` option.
+3. `--in instances.yml` is going to effectively use each instance specified in `instances.yml` and generate its certificate, private key and the CA certificate.
+4. Output the final compressed zip with the name `certs.zip`.
+![Creating our certificates for each instance.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/creating-instances-certificates.png)
+
+The command output on its own does a great job giving a ton of documentation, which is awesome. We'll unzip the zip folder and then make a new directory `certs` solely to organize our goodies. Run `sudo unzip certs.zip` then `sudo mkdir certs`. We'll move all of our cert files into this directory with the following commands:
+1. `sudo mv /usr/share/elasticsearch/elasticsearch/* certs/`
+2. `sudo mv /usr/share/elasticsearch/kibana/* certs/`
+3. `sudo mv /usr/share/elasticsearch/fleet/ * certs/`
+
+Next, we will create directories to store the CA certificate and private key for each of our services:
+1. `sudo mkdir -p /etc/elasticsearch/certs/ca`
+2. `sudo mkdir -p /etc/kibana/certs/ca`
+3. `sudo mkdir -p /etc/fleet/certs/ca`
+
+Then we copy the private key and CA certificate:
+1. `sudo cp ca/ca.* /etc/elasticsearch/certs/ca`
+2. `sudo cp ca/ca.* /etc/kibana/certs/ca`
+3. `sudo cp ca/ca.* /etc/fleet/certs/ca`
+
+And finally, copy the service sertificates and keys we generated in the beginning to each `certs` directory:
+1. `sudo cp certs/elasticsearch.* /etc/elasticsearch/certs/`
+2. `sudo cp certs/kibana.* /etc/kibana/certs/`
+3. `sudo cp certs/fleet.* /etc/fleet/certs/`
+
+Last thing to do before moving on is to clean up our now empty directories as we have moved their contents to the above new folders: `sudo rm -r elasticsearch/ kibana/ fleet/`. 
+
+# Intermission: Proper Security for SIEM Deployment
 To be continued...
 
-# Setting up the Attack: Windows Setup and Kill Chain Diagram
+# Setting up Attack #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
 
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info. (This is a note for myself, don't worry about it my gamer)
 
-Will create Kill Chain diagram of attack in detail once this step is reached. Potential privilege escalation attempt in the attack as well on Windows; potentially w/ Windows Credential Manager and `cmdkey /list` 'vulnerability.'
+Will create Kill Chain diagram of attack in detail once this step is reached. 
+
+Privilege escalation attempt on Windows using Windows Credential Manager and `cmdkey /list` 'vulnerability.' Started thru internal spearphishing from hacked coworker and was messaged about a potential PC issue requiring escalated privileges.
+
+# Setting up Attack #2: Attack Story and Kill Chain Diagram
+<strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+
+Suggested by chroma. 
 
 # Sources
 - [Official Elastic Docs on upgrading Elastic components. Highly recommend you consult both this and other sources if you wish to upgrade your lab.](https://www.elastic.co/guide/en/elastic-stack/current/upgrading-elastic-stack.html)
 - [Official Elastic Docs on downloading Beats but also for adding the Elastic repo w/ APT or YUM.](https://www.elastic.co/guide/en/beats/filebeat/current/setup-repositories.html)
+- [Ofiicial Elastic Docs on using certutil to create certificates for Elastic components.](https://www.elastic.co/guide/en/elasticsearch/reference/current/certutil.html)
 - [Official MS Docs on Script Block Logging and PowerShell event IDs.](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_logging?view=powershell-5.1)
 - [Official Elastic Docs on configuring winlog input for Filebeat.](https://www.elastic.co/guide/en/beats/filebeat/current/filebeat-input-winlog.html)
 - [Official Elastic Docs regarding the cat indices API.](https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cat-indices.html#cat-indices-api-request)
