@@ -9,13 +9,13 @@ That is all :)
 # Preface
 <strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the Elastic 'technologies'.
 
-As stated above, there are many sources I consulted, all of which will be linked below for your own reading. The following will be a step-by-step guide of me <strong>creating my own SIEM</strong> using Oracle VirtualBox and namely Elastissearch, Beats and Kibana for indexing/analyzing, ingesting and visualizing our log data respectively.
+As stated above, there are many sources I consulted, all of which will be linked below for your own reading. The following will be a step-by-step guide of me <strong>creating my own SIEM</strong> using Oracle VirtualBox, Elastissearch, Beats and Kibana for indexing/analyzing, ingesting and visualizing our log data respectively.
 
 This guide is aimed to be very step-by-step oriented; I guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32.
 
 Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. 
 
-Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
+Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, etc. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
 1. Voiced to me. Yes, you can message me on Discord or via email. 
 2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s).
 
@@ -28,7 +28,14 @@ With that being siad, if you would like to contribute to this repo, feel free to
 - Dashboards (Kibana duh)
 - Alerts (Achieved inside the actual SIEM UI)
 
-You may notice that I did not include retention, and that is because I do not plan to retain data for this solution. This is made for a homelab setp; not a production environment where retention is necessary to trash malicious behaviour.
+# What You Will Learn!
+By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
+- Understand the workings of a SIEM, from ingest to visuallizing the data.
+- Understanding of Elasticsearch, Beats and Kibana; what each component does
+- Understand what a CA is, the signing process, and how SSL certificates function
+- Understand MITRE ATT&CK and using it to show TTPs of an attack
+- Understand the Kill Chain framework; understand the attacker POV
+- Understand incident response measures for triaging attacks.
 
 # The Setup Begins
 This is our first step into our SIEM-building journey. 
@@ -243,21 +250,48 @@ And finally, copy the service sertificates and keys we generated in the beginnin
 Last thing to do before moving on is to clean up our now empty directories as we have moved their contents to the above new folders: `sudo rm -r elasticsearch/ kibana/ fleet/`. 
 
 # Intermission: Proper Security for SIEM Deployment
+Fun fact, we are using `sudo` a fair bit to access stuff on our system given escalated privileges through authentication. Simply put, we input out password to edit most of our configs, since this is low level stuff yes? 
+
+What if we hate using `sudo` and just want to edit everything? Well, we just use the root account all the time, then we don't need to worry about authenticating! <strong>No, no, no, no!!!!</strong> Bad! We want to employ least privilege on everything. As someone studying cybersecurity and even speaking with current analysts, systems are VERY susceptible to attacks; friggin' [PrintNightmare](https://nvd.nist.gov/vuln/detail/cve-2021-34527) everywhere. 
+
+What we are going to do is just that; employ least privilege on our systems to each of our services to both 1) Enhance our security posture and 2) <strong>Practice the task of assigning least privilege.</strong>
+
+We'll begin by navigating to `/usr/share` and run the following commands:
+1. `sudo chown -R elasticsearch:elasticsearch elasticsearch/`, which will 1) Recursively set the ownership of the `elasticsearch` directory to Elasticsearch and 2) Change its group to the `elasticsearch` group, which will further allow us to limit the scope of Elasticsearch's permissions.
+2. `sudo chown -R elasticsearch:elasticsearch /etc/elasticsearch/certs/ca`. Same stuff as above but now for Elasticsearch's CA copies, so it can access that directory as well.
+
+To ensure our posture is correct and our certificates are valid, we will use the `openssl` command to print certificate information to the console with the following command: `sudo openssl x509 -in /etc/elasticsearch/certs/elasticsearch.crt -text -noout`, which will: 
+1. Print information for X509 certificates.
+2. `-in` specifies the certificate to check out
+3. `-text`  ouputs everything as human-readable.
+4. `-noout` suppresses the output of the encoded version of the certificate; only shows the human-readbale output above.
+![Success.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-chown-success.png)
+
+Marvelous. We'll do the same for Kibana now. Fleet does not have a user like Elasticsearch and Kibana, so we can continue on after this:
+1. `sudo chown -R kibana:kibana kibana/`
+2. `sudo chown -R kibana:kibana /etc/kibana/certs/ca`
+
+Then we rerun the above command to check our certificate status: `sudo openssl x509 -in /etc/kibana/certs/kibana.crt -text -noout`. And with that, we have both of our services with, effectively, least privilege.
+
+# Configuring The Services To Run HTTTPS
 To be continued...
 
 # Setting up Attack #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+Sally from Accounting sees an urgent email from her coworker that declares something is wrong with her device, requiring her to open a TCP port on her device. Unbeknownst to Sally, the open port she opens exposes her to a reverse shell vulnerability. The hacker sends a payload to the listening port which opens the reverse shell on the attackers' system; SOC is notified of the listening port and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps`. Kill any processes that may be malicious. 
 
-Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info. (This is a note for myself, don't worry about it my gamer)
+Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
 
-Will create Kill Chain diagram of attack in detail once this step is reached. 
-
-Privilege escalation attempt on Windows using Windows Credential Manager and `cmdkey /list` 'vulnerability.' Started thru internal spearphishing from hacked coworker and was messaged about a potential PC issue requiring escalated privileges.
+Will create Kill Chain diagram of attack. 
 
 # Setting up Attack #2: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
 
-Suggested by chroma. 
+An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program and delete it before it can do further damage.
+
+Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
+
+Will create Kill Chain diagram of attack.
 
 # Sources
 - [Official Elastic Docs on upgrading Elastic components. Highly recommend you consult both this and other sources if you wish to upgrade your lab.](https://www.elastic.co/guide/en/elastic-stack/current/upgrading-elastic-stack.html)
