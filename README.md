@@ -273,7 +273,73 @@ Marvelous. We'll do the same for Kibana now. Fleet does not have a user like Ela
 
 Then we rerun the above command to check our certificate status: `sudo openssl x509 -in /etc/kibana/certs/kibana.crt -text -noout`. And with that, we have both of our services with, effectively, least privilege.
 
-# Configuring The Services To Run HTTTPS
+# Configuring The Services To Run HTTTPS w/ SSL Certificates
+Now we are effectively ready to put everything together, and enable SSL on all of our services, thereby enabling HTTPS. 
+
+Our first step is to go configure the `kibana.yml` configuration file in `/etc/kibana/` using a text editor, where we will copy the following massive text wall and paste it to the <strong>bottom</strong> of our YML file:
+
+```
+server.ssl.enabled: true
+server.ssl.certificate: "/etc/kibana/certs/kibana.crt"
+server.ssl.key: "/etc/kibana/certs/kibana.key"
+
+elasticsearch.hosts: ["https://10.0.2.15:9200"]
+elasticsearch.ssl.certificateAuthorities: ["/etc/kibana/certs/ca/ca.crt"]
+elasticsearch.ssl.certificate: "/etc/kibana/certs/kibana.crt"
+elasticsearch.ssl.key: "/etc/kibana/certs/kibana.key"
+
+server.publicBaseUrl: "https://10.0.2.15:5601"
+
+xpack.security.enabled: true
+xpack.security.session.idleTimeout: "30m"
+xpack.encryptedSavedObjects.encryptionKey: "min-32-byte-long-strong-encryption-key"
+```
+
+Fun fact, these are all properties inside of our YML file, but they are commented out, and addressing you to edit each and every property would be a pain. Some of these are very self explanatory and others are not the case. The `server.publicBaseUrl` property is our IP and Kibana port number (5601), which specifies where Kibana is available; basically our SIEM UI. The `xpack` bits are all for securing Elasticsearch. The `xpack.encryptedSavedObjects.encryptionKey` property is for creating an encryption key to encrypt and decrypt sensitive Kibana entities like dashboards, alerts, etc. We use the default specified by [Elastic](https://www.elastic.co/guide/en/kibana/current/xpack-security-secure-saved-objects.html), but if you guys find docs on this, PLEASE send them to me because I cannot find many examples for this property.
+
+The rather confusing matter in all of this is specifying the `elasticsearch.ssl.key/certificate` properties with our kibana key/certificate. Initially, I was very confused on why we (the LevelEffect Guide linked in Sources) was using the Kibana certificate and key here, but the answer is LITERALLY in the YML file comments. We are SENDING the Kibana certificate and key TO Elasticsearch to VERIFY our identity as Kibana. That is it. And here I was, scrabbling in the dirt for 10 minutes trying to find an answer xD
+
+Anyways, remember to replace the `10.0.2.15` with your host IPs from before. Save and exit, then open the `elasticsearch.yml` configuration file in `/etc/elasticsearch/` and paste the following to the bottom of your YML file:
+
+```
+xpack.security.enabled: true
+xpack.security.authc.api_key.enabled: true
+
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.key: /etc/elasticsearch/certs/elasticsearch.key
+xpack.security.transport.ssl.certificate: /etc/elasticsearch/certs/elasticsearch.crt
+xpack.security.transport.ssl.certificate_authorities: ["/etc/elasticsearch/certs/ca/ca.crt"]
+
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.verification_mode: certificate
+xpack.security.http.ssl.key: /etc/elasticsearch/certs/elasticsearch.key
+xpack.security.http.ssl.certificate: /etc/elasticsearch/certs/elasticsearch.crt
+xpack.security.http.ssl.certificate_authorities: ["/etc/elasticsearch/certs/ca/ca.crt"]
+```
+
+For the sake of length and explanation, I will leave [a link to documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/security-settings.html#token-service-settings) for you to read. The summary for these settings is that we are enabling a gajillion security features and settings for our setup, particularly to use SSL.
+
+You will 110% notice that we have no quotation marks with each filepath here, and that is, in fact, the correct method to display them here. I believe this is simply a matter of parsing behind the scenes, but it is undeniably a <strong>terrible one.</strong> The `certificate_authorities` list needing quotation marks makes sense, but wadahek Elastic? Were the devs chugging Red Bull while making the backend for this?
+
+Save and exit as usual, and we are ready to load our new configurations to officially enable SSL for our services. If you recall from before, we need to restart our services to enable new configurations by running `sudo systemctl restart <service_name>`. `restart` will both start the system if it is not running and restart it, so we can go ahead and do just that for both Elasticsearch and Kibana:
+
+1. `sudo systemctl restart elasticsearch`
+2. `sudo systemctl restart kibana`
+
+If you're not like me and had a typo in their `elasticsearch.yml` config and panicked whem everything blew up in my face for like 10 minutes (I forgot to specify the SSL CERTIFICATE BRO), you should have everything running just fine. Run `sudo systemctl status <elasticsearch or kibana>` if you wanna check the status of either service, though we can be certain they are running at the moment.
+
+We don't need `filebeat` running for this next step. Our last check to ensure everything is in order is to `curl` the HTTPS host for Elasticsearch, which in my case is: `curl --get https://10.0.2.15:9200`. Replace your IP as needed, anddd....
+![Erm... What?](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/curl-fail.png)
+
+"Nubb you damn fraud, this don't work! I quit!!!!!"
+
+<strong>Noooooooooooo!</strong> Firstly, don't quit easy like that. Secondly, the reason why `curl` failed like this is because our browser does not trust the certificate just yet, or rather, the CA. We can bypass this temporarily and just add the `--insecure` parameter to end of our `curl` command and pipe the output to `jq` to make it nice and pretty as JSON format: `curl --get https://10.0.2.15:9200 --insecure | jq`.
+![Yippee!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/curl-success.png)
+
+Nice, we at least got something! To summarize this output, we require credential to log into Elasticsearch, which we will generate in the next step of our guide. But for now, go ahead and pat yourself on the back; we've got SSL running and security enabled! One step closer to a real homelab setup. We can stop our services by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`. 
+
+# Generating Authentication Credentials For Elasticsearch
 To be continued...
 
 # Setting up a Kali Linux VM w/ VirtualBox
@@ -285,8 +351,8 @@ To be continued...
 
 # Setting up a Windows 10 VM w/ VirtualBox
 1. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively.
-2. Set up your system resources as you wish. Refer to original ubuntu VM setup instructions as needed.
-3. to be continued...
+2. Set up your system resources as you wish. Refer to the original Ubuntu VM setup instructions as needed.
+3. To be continued...
 
 # Setting up Attack #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
