@@ -276,9 +276,25 @@ Then we rerun the above command to check our certificate status: `sudo openssl x
 # Configuring The Services To Run HTTTPS
 To be continued...
 
+# Setting up a Kali Linux VM w/ VirtualBox
+<strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+1. Go to [here](https://www.kali.org/get-kali/#kali-virtual-machines) to get a prebuilt kali vm.
+2. Unpack the download w/ `7z x downloadedacrhive.7z`. If needed, install `p7zip` on Ubuntu/Debian w/ `sudo apt install p7zip-full` which provides us with the extraction tooling. Run `sudo apt update` before installing. <strong>This will take a while.</strong>
+3. Go to VirtualBox and Click 'Add' and select the extracted Kali VirtualBox folder.
+4. Start the VM and input 'kali' as both your username and password.
+
+# Setting up a Windows 10 VM w/ VirtualBox
+1. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively.
+2. Set up your system resources as you wish. Refer to original ubuntu VM setup instructions as needed.
+3. to be continued...
+
 # Setting up Attack #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
-Sally from Accounting sees an urgent email from her coworker that declares something is wrong with her device, requiring her to open a TCP port on her device. Unbeknownst to Sally, the open port she opens exposes her to a reverse shell vulnerability. The hacker sends a payload to the listening port which opens the reverse shell on the attackers' system; SOC is notified of the listening port and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps`. Kill any processes that may be malicious. 
+Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to open a TCP port on her device. Unbeknownst to Sally, the open port she opens exposes her to a reverse shell vulnerability. The hacker sends a payload to the listening port which opens the reverse shell on the attackers' system; SOC is notified of the listening port and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps`. Kill any processes that may be malicious. 
+
+## MITRE Layout:
+- Impersonation as coworker using fake email. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/) and [T1566](https://attack.mitre.org/techniques/T1566/).
+- Listen on TCP port and open reverse shell. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/).
 
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
 
@@ -289,11 +305,18 @@ Will create Kill Chain diagram of attack.
 
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program and delete it before it can do further damage.
 
+## MITRE Layout:
+- Posing as IT/Help Desk. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/).
+- User executes IEX command per Help Desk's response. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/).
+- Data is locally collected and stored locally. [T1074.001](https://attack.mitre.org/techniques/T1074/001/).
+
+
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
 
 Will create Kill Chain diagram of attack.
 
 # Sources
+- [MITRE ATT&CK Website for TTPs.](https://attack.mitre.org/)
 - [Official Elastic Docs on upgrading Elastic components. Highly recommend you consult both this and other sources if you wish to upgrade your lab.](https://www.elastic.co/guide/en/elastic-stack/current/upgrading-elastic-stack.html)
 - [Official Elastic Docs on downloading Beats but also for adding the Elastic repo w/ APT or YUM.](https://www.elastic.co/guide/en/beats/filebeat/current/setup-repositories.html)
 - [Ofiicial Elastic Docs on using certutil to create certificates for Elastic components.](https://www.elastic.co/guide/en/elasticsearch/reference/current/certutil.html)
