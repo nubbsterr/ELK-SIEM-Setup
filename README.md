@@ -31,10 +31,10 @@ With that being siad, if you would like to contribute to this repo, feel free to
 # What You Will Learn!
 By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
 - Understand the workings of a SIEM, from ingest to visuallizing the data.
-- Understanding of Elasticsearch, Beats and Kibana; what each component does
-- Understand what a CA is, the signing process, and how SSL certificates function
-- Understand MITRE ATT&CK and using it to show TTPs of an attack
-- Understand the Kill Chain framework; understand the attacker POV
+- Understanding of Elasticsearch, Beats and Kibana; what each component does.
+- Understand what a CA is, the signing process, and how SSL certificates function.
+- Understand MITRE ATT&CK and using it to show TTPs of an attack.
+- Understand the Kill Chain framework; understand the attacker POV.
 - Understand incident response measures for triaging attacks.
 
 # The Setup Begins
@@ -350,9 +350,23 @@ To be continued...
 4. Start the VM and input 'kali' as both your username and password.
 
 # Setting up a Windows 10 VM w/ VirtualBox
-1. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively.
-2. Set up your system resources as you wish. Refer to the original Ubuntu VM setup instructions as needed.
-3. To be continued...
+1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your lnaguage as needed and wait for the download to complete.
+2. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively. Select the previously installed Windows 10 ISO as your ISO image. Check the box to skip the 'Unattended Install' as well.
+![Windows VM Config](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows=vm-config.png)
+3. Set up your system resources as you wish. Refer to the original Ubuntu VM setup instructions as needed. I have my VM set to run 4GB of RAM and 2 vCPUs/Processors.
+4. Set storage for your Virtual Hard Disk; I have allocated 50GB of space.
+
+Our Windows VM is now complete. We can now start it up and proceed to setting up Windows. To keep it short and sweet, simply follow the installer's instructions; <strong>when you are prompted for a product key, click the 'I don't have a product key' prompt.</strong>
+
+We'll be installing Windows 10 Home, no special stuff here. Make sure to select the 'Custom: Install Windows Only' prompt when you reach the below step.
+![We want a clean install.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows-install-select.png)
+
+Select the unallocated disk space, click 'Next', and wait for the install to complete :) Once the install finishes, Cortana will jumpscare you and the final bits of our Windows setup will commence; setting our region/country, keyboard layout, but most importantly, creating a Microsoft Account. <strong>The easiest way to skip this is to disconnect from the internet or Ethernet and attempt to go back to a previous step, then reconnect to the internet.</strong> This worked for me. Alternatively, you can input <strong>Shift + F10 to open the Command Prompt, then input `oobe/bypassnro`, which will reboot your system and effectively skip this step.</strong> I didn't try this myself, so let me know if it doesn't work and I will revamp this step as needed.
+
+Otherwise, we can continue and make a Local Account with out desired credentials and set up security questions. Then we get to disable all of the spyware that Microsoft attempts to install or enable, <strong>say no to EVERYTHING.</strong> Cortana will annoy us once more before finally leaving us alone and letting the Windows install totally finish. 
+![It's finally over...](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows-success.png)
+
+Additionally, once you load up Windows, you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat). This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me!
 
 # Setting up Attack #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
