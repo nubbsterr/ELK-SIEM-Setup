@@ -383,13 +383,13 @@ Will create Kill Chain diagram of attack.
 # Setting up Attack #2: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
 
-An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program and delete it before it can do further damage.
+An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
 
 ## MITRE Layout:
 - Posing as IT/Help Desk. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/).
 - User executes IEX command per Help Desk's response. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/).
 - Data is locally collected and stored locally. [T1074.001](https://attack.mitre.org/techniques/T1074/001/).
-
+- Data exfilration to Discord server using internet (Discord on the Web). [T1020](https://attack.mitre.org/techniques/T1020/) and [T1567](https://attack.mitre.org/techniques/T1567/).
 
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
 
