@@ -31,8 +31,9 @@ With that being siad, if you would like to contribute to this repo, feel free to
 # What You Will Learn!
 By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
 - Understand the workings of a SIEM, from ingest to visuallizing the data.
-- Understanding of Elasticsearch, Beats and Kibana; what each component does.
+- Understand how Elasticsearch, Beats and Kibana work together to create a SIEM.
 - Understand what a CA is, the signing process, and how SSL certificates function.
+- Establish simulated attacks in a controlled environment and employ root cause analysis.
 - Understand MITRE ATT&CK and using it to show TTPs of an attack.
 - Understand the Kill Chain framework; understand the attacker POV.
 - Understand incident response measures for triaging attacks.
@@ -340,6 +341,17 @@ We don't need `filebeat` running for this next step. Our last check to ensure ev
 Nice, we at least got something! To summarize this output, we require credential to log into Elasticsearch, which we will generate in the next step of our guide. But for now, go ahead and pat yourself on the back; we've got SSL running and security enabled! One step closer to a real homelab setup. We can stop our services by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`. 
 
 # Generating Authentication Credentials For Elasticsearch
+To generate credentials, we will use the [elasticsearch-setup-passwords](https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-passwords.html) utility to do so. Documentation is hyperlinked as always for your reading. Simply put, the utility will generate passwords for a cluster and connect via HTTPS using our previously defined `xpack.security.http.ssl` in our `elasticsearch.yml` file. 
+
+Run `sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto` to randomly generate passwords, set the passwords of select users, and output them to the console. Make sure Elasticsearch is running before you do this or else you will get an error. You will see many passwords and names associated with them. For example, `apm_system` is the [APM or Application Performance Montioring System](https://www.elastic.co/guide/en/observability/current/apm.html), which, per its name, collects performance metrics for services and applications running in real-time, and is built on the Elastic Stack. More information about these users can be collected here by [Elastic's official documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-users.html)
+
+We only need the `kibana_system` password as that is how we will log in to our frontend UI and access our SIEM. Authentication to Elasticsearch is proxied by Kibana as well, so we can get away with doing this just fine. Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Change the `elasticsearch.password` to the password we just generated and change the `elasticsearch.username` property to a username of your choice. 
+
+Save and exit our YML config file and restart Kibana so that our new configuration settings are read properly with `sudo systemctl restart kibana`.
+
+And with that, we are ready to log into our SIEM frontend for the first time! Congrats for remaining focused and sticking with me this far; your hard work and persistence is paying off :) If you want to shut down your system for the day, we can do so by stopping Kibana then Elasticsearch by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`.
+
+# Logging into Elastic
 To be continued...
 
 # Setting up a Kali Linux VM w/ VirtualBox
@@ -348,6 +360,8 @@ To be continued...
 2. Unpack the download w/ `7z x downloadedacrhive.7z`. If needed, install `p7zip` on Ubuntu/Debian w/ `sudo apt install p7zip-full` which provides us with the extraction tooling. Run `sudo apt update` before installing. <strong>This will take a while.</strong>
 3. Go to VirtualBox and Click 'Add' and select the extracted Kali VirtualBox folder.
 4. Start the VM and input 'kali' as both your username and password.
+
+To be continued...
 
 # Setting up a Windows 10 VM w/ VirtualBox
 1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your lnaguage as needed and wait for the download to complete.
@@ -368,8 +382,9 @@ Otherwise, we can continue and make a Local Account with out desired credentials
 
 Additionally, once you load up Windows, you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat). This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me!
 
-# Setting up Attack #1: Attack Story and Kill Chain Diagram
+# Incident #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+
 Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to open a TCP port on her device. Unbeknownst to Sally, the open port she opens exposes her to a reverse shell vulnerability. The hacker sends a payload to the listening port which opens the reverse shell on the attackers' system; SOC is notified of the listening port and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps`. Kill any processes that may be malicious. 
 
 ## MITRE Layout:
@@ -378,9 +393,9 @@ Sally from Accounting sees an urgent email from her coworker (a similar, but fak
 
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
 
-Will create Kill Chain diagram of attack. 
+Will create Kill Chain diagram of attack using Excalidraw.
 
-# Setting up Attack #2: Attack Story and Kill Chain Diagram
+# Incident #2: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
 
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
@@ -393,7 +408,7 @@ An IEX exploit that results in a payload being downloaded and executed on a mach
 
 Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
 
-Will create Kill Chain diagram of attack.
+Will create Kill Chain diagram of attack using Excalidraw.
 
 # Sources
 - [MITRE ATT&CK Website for TTPs.](https://attack.mitre.org/)
