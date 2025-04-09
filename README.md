@@ -2,7 +2,7 @@
 A guide for building your own SIEM using the Elasticsearch, Beats, and Kibana, and how to simulate, analyze and triage attacks for a homelab. Courtesy of the internet and other sources.
 
 # A Very Friendly Warning
-Given that this is still being developed, nothing is final. If you are going step-by-step in this guide assuming its <strong>unfinished form</strong> (that is, using this guide before it is totally complete), be warned that you may do either 1) Ruining the final build or 2) Unneeded time wasting steps.
+Given that this is still being developed, nothing is final. If you are going step-by-step in this guide assuming its <strong>unfinished form</strong> (that is, using this guide before it is totally complete), be warned that you may 1) ruin your final build or 2) waste a lot of time on unneeded steps or 3) have to restart like I did because of a funny mistake.
 
 That is all :)
 
@@ -263,16 +263,14 @@ We'll begin by navigating to `/usr/share` and run the following commands:
 1. `sudo chown -R elasticsearch:elasticsearch elasticsearch/`, which will 1) Recursively set the ownership of the `elasticsearch` directory to Elasticsearch and 2) Change its group to the `elasticsearch` group, which will further allow us to limit the scope of Elasticsearch's permissions.
 2. `sudo chown -R elasticsearch:elasticsearch /etc/elasticsearch/certs/ca`. Same stuff as above but now for Elasticsearch's CA copies, so it can access that directory as well.
 
-To ensure our posture is correct and our certificates are valid, we will use the `openssl` command to print certificate information to the console with the following command: `sudo openssl x509 -in /etc/elasticsearch/certs/elasticsearch.crt -text -noout`, which will: 
+<strong>Now I cannot make myself any clear that you must NOT do this `chown` privilege restriction to Kibana FOR ANY REASON. Kibaan needs access to its CA files to serve the SIEM frontend.</strong>
+
+Now, to ensure our posture is correct and our certificates are valid, we will use the `openssl` command to print certificate information to the console with the following command: `sudo openssl x509 -in /etc/elasticsearch/certs/elasticsearch.crt -text -noout`, which will: 
 1. Print information for X509 certificates.
 2. `-in` specifies the certificate to check out
 3. `-text`  ouputs everything as human-readable.
 4. `-noout` suppresses the output of the encoded version of the certificate; only shows the human-readbale output above.
 ![Success.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-chown-success.png)
-
-Marvelous. We'll do the same for Kibana now. Fleet does not have a user like Elasticsearch and Kibana, so we can continue on after this:
-1. `sudo chown -R kibana:kibana kibana/`
-2. `sudo chown -R kibana:kibana /etc/kibana/certs/ca`
 
 Then we rerun the above command to check our certificate status: `sudo openssl x509 -in /etc/kibana/certs/kibana.crt -text -noout`. And with that, we have both of our services with, effectively, least privilege.
 
@@ -354,6 +352,10 @@ Save and exit our YML config file and restart Kibana so that our new configurati
 And with that, we are ready to log into our SIEM frontend for the first time! Congrats for remaining focused and sticking with me this far; your hard work and persistence is paying off :) If you want to shut down your system for the day, we can do so by stopping Kibana then Elasticsearch by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`.
 
 # Logging into Elastic
+Firstly, start up Elasticsearch and Kibana if you haven't already with `sudo systemctl start elasticsearch` and `sudo systemctl start kibana`. The fun part starts now.
+
+Open your web browser on your host machine and navigate to `https://KIBANA_HOST_IP:5601`. `5601` is the port Kibana operates on, which hosts the frontend UI for our SIEM. 
+
 To be continued...
 
 # Intermission: Setting up a Kali Linux VM w/ VirtualBox
@@ -400,7 +402,7 @@ Sally from Accounting sees an urgent email from her coworker (a similar, but fak
 - Ensure log data is being sent to Elastic server.
 - Ensure your Windows VM is updated and can run PowerShell.
 
-## Kill Chain Diagram
+## Kill Chain Diagram, Made Using Excalidraw
 ![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/ReverseShellKillChain.png)
 
 ## Incident Steps
@@ -418,7 +420,7 @@ An IEX exploit that results in a payload being downloaded and executed on a mach
 ## Inital Windows Setup
 - Same steps as Incident #1. Scroll up :)
 
-## Kill Chain Diagram
+## Kill Chain Diagram, Made Using Excalidraw
 ![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/IEX-IWRKillChain.png)
 
 ## Incident Steps
