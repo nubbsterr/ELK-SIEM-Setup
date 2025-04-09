@@ -1,4 +1,4 @@
-# ELK-SIEM-Setup
+# Elastic-SIEM-Setup
 A guide for building your own SIEM using the Elasticsearch, Beats, and Kibana, and how to simulate, analyze and triage attacks for a homelab. Courtesy of the internet and other sources.
 
 # A Very Friendly Warning
@@ -15,7 +15,7 @@ This guide is aimed to be very step-by-step oriented; I guide you through everyt
 
 Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. 
 
-Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, etc. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
+Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, `systemctl`, etc. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
 1. Voiced to me. Yes, you can message me on Discord or via email. 
 2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s).
 
@@ -23,19 +23,21 @@ With that being siad, if you would like to contribute to this repo, feel free to
 
 # SIEM Features
 <strong>Basic features</strong> should include:
-- Log ingestion (mainly network-related logs and OS log data for initial testing. Beats can be used for ingest.)
-- Log parsing/querying (KQL can easily query for us + Beats for basic parsing.)
-- Dashboards (Kibana duh)
-- Alerts (Achieved inside the actual SIEM UI)
+- Log ingestion and indexing
+- Log parsing/querying
+- Dashboards
+- Alerts
+
+Other features like event correlation, root cause analysis, ML and whatnot are achieved in more advanced software like EDRs and XDRs, which we will not be making anytime soon.
 
 # What You Will Learn!
 By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
 - Understand the workings of a SIEM, from ingest to visuallizing the data.
 - Understand how Elasticsearch, Beats and Kibana work together to create a SIEM.
-- Understand what a CA is, the signing process, and how SSL certificates function.
+- Understand what a [CA](https://en.wikipedia.org/wiki/Certificate_authority) is, the signing process, and how SSL certificates function.
 - Establish simulated attacks in a controlled environment and employ root cause analysis.
-- Understand MITRE ATT&CK and using it to show TTPs of an attack.
-- Understand the Kill Chain framework; understand the attacker POV.
+- Understand [MITRE ATT&CK](https://attack.mitre.org/) and using it to show TTPs of an attack.
+- Understand the [Kill Chain framework](https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html); understand the attacker POV.
 - Understand incident response measures for triaging attacks.
 
 # The Setup Begins
@@ -106,22 +108,22 @@ Success! We can now continue setting up our VM, or be like me and shutdown every
 
 Firstly, we will be installing `apt-transport-https`, which on its own enables APT transport to be done w/ HTTPS and not HTTP; slightly more secure stuff for our VM which could prove useful for production environments.
 
-Run `sudo apt install apt-transport-https -y` and continue. Next we add the GPG key for Elasticsearch and its repo to our ubuntu sources.
+Run `sudo apt install apt-transport-https -y` and continue. Next we add the GPG key for Elasticsearch and its repo to our Ubuntu sources.
 
 Run `wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -` to add the GPG key and `echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list` to see the repo in our ubuntu sources. 
 ![GPG and repo added!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/gpg-repo-success.png)
 
 Success! Update our packages then install elasticsearch. Run `sudo apt update -y && sudo apt install elasticsearch -y`.
 
-Now that elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files.
+Now that Elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files.
 
-We will want to confirm that elasticsearch is actually on our system, so run `sudo systemctl status elasticsearch.service`, we preferably want to see a 'dead' process.
+We will want to confirm that Elasticsearch is actually on our system, so run `sudo systemctl status elasticsearch.service`, we preferably want to see a 'dead' process.
 ![Yes I did a typo.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-success.png)
 
-Real talk, I included that typo to show that I am human just like you. Creating this guide is both for my learning and so you can get a lovely homelab setup to enjoy cybersec :) With that being said, we are officially finished the installation phase for elasticsearch and will now get to configuring it.
+Real talk, I included that typo to show that I am human just like you. Creating this guide is both for my learning and so you can get a lovely homelab setup to enjoy cybersec :) With that being said, we are officially finished the installation phase for Elasticsearch and will now get to configuring it.
 
 # Configuring Elasticsearch and Running the Cluster
-This step is entirely for configuring elasticsearch; telling it how to run, what ports it needs, communication, etc.
+This step is entirely for configuring Elasticsearch; telling it how to run, what ports it needs, communication, etc.
 
 Open `/etc/elasticsearch/elasticsearch.yml` in a text editor (neovim da goat). If you are using a terminal editor like me, run `sudo EDITOR_OF_CHOICE ELASTICSEARCH.YML PATH`. Firstly, we will edit the cluster.name property to be the name of your choice for your homelab. 
 ![Delete those pesky pound symbols.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/edit-elasticsearch-config.png)
@@ -354,16 +356,20 @@ And with that, we are ready to log into our SIEM frontend for the first time! Co
 # Logging into Elastic
 To be continued...
 
-# Setting up a Kali Linux VM w/ VirtualBox
-<strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+# Intermission: Setting up a Kali Linux VM w/ VirtualBox
+I intended to have this (a Kali VM) to be used for one of the incidents below. However, that won't be needed since we really only need a Windows VM/System and Linux VM/System. Ensure you have either OS and are comfortable with interacting with your host OS for the simulated incidents.
+
 1. Go to [here](https://www.kali.org/get-kali/#kali-virtual-machines) to get a prebuilt kali vm.
 2. Unpack the download w/ `7z x downloadedacrhive.7z`. If needed, install `p7zip` on Ubuntu/Debian w/ `sudo apt install p7zip-full` which provides us with the extraction tooling. Run `sudo apt update` before installing. <strong>This will take a while.</strong>
 3. Go to VirtualBox and Click 'Add' and select the extracted Kali VirtualBox folder.
 4. Start the VM and input 'kali' as both your username and password.
 
-To be continued...
+Congrats, you have a Kali Linux VM running! Run the following commands to update your packages:
+1. `sudo apt update`, to check for updates and updatable packages.
+2. `sudo apt upgrade`, upgrade packages found in the previous command.
+3. `sudo apt autoremove`, remove any unneeded dependencies for packages to clean up a lil.
 
-# Setting up a Windows 10 VM w/ VirtualBox
+# Intermission: Setting up a Windows 10 VM w/ VirtualBox
 1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your lnaguage as needed and wait for the download to complete.
 2. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively. Select the previously installed Windows 10 ISO as your ISO image. Check the box to skip the 'Unattended Install' as well.
 ![Windows VM Config](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows=vm-config.png)
@@ -380,24 +386,27 @@ Select the unallocated disk space, click 'Next', and wait for the install to com
 Otherwise, we can continue and make a Local Account with out desired credentials and set up security questions. Then we get to disable all of the spyware that Microsoft attempts to install or enable, <strong>say no to EVERYTHING.</strong> Cortana will annoy us once more before finally leaving us alone and letting the Windows install totally finish. 
 ![It's finally over...](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows-success.png)
 
-Additionally, once you load up Windows, you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat). This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me!
+Additionally, once you load up Windows, you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat). This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
 
-# Incident #1: Attack Story and Kill Chain Diagram
-<strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
-
+# Incident #1: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
 Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to send a payload to a specific port on a remote machine. Unbeknownst to Sally, the payload was sent to the attackers' machine, which opened up a reverse shell on the attackers' system. SOC is notified of the PowerShell activity and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps` and employ appropriate incident response measures.
 
 ## MITRE Layout:
 - Impersonation as coworker using fake email. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/) and [T1566](https://attack.mitre.org/techniques/T1566/).
 - Listen on TCP port and open reverse shell. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/).
 
-Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
+## Pre-Incident Setup:
+- Add/change `filebeat.yml` input config to have `PowerShellCore/Operational` to support PowerShell >=7.4.
+- Ensure log data is being sent to Elastic server.
+- Ensure your Windows VM is updated and can run PowerShell.
 
-Will create Kill Chain diagram of attack using Excalidraw.
+## Kill Chain Diagram
+![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/ReverseShellKillChain.png)
 
-# Incident #2: Attack Story and Kill Chain Diagram
-<strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
+## Incident Steps
+To be continued...
 
+# Incident #2: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
 
 ## MITRE Layout:
@@ -406,9 +415,14 @@ An IEX exploit that results in a payload being downloaded and executed on a mach
 - Data is locally collected and stored locally. [T1074.001](https://attack.mitre.org/techniques/T1074/001/).
 - Data exfilration to Discord server using internet (Discord on the Web). [T1020](https://attack.mitre.org/techniques/T1020/) and [T1567](https://attack.mitre.org/techniques/T1567/).
 
-Script Block Logging needs to be enable in accordance to PS 5.1 documentation below. See sources for more info.
+## Inital Windows Setup
+- Same steps as Incident #1. Scroll up :)
 
-Will create Kill Chain diagram of attack using Excalidraw.
+## Kill Chain Diagram
+![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/IEX-IWRKillChain.png)
+
+## Incident Steps
+To be continued...
 
 # Sources
 - [MITRE ATT&CK Website for TTPs.](https://attack.mitre.org/)
