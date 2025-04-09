@@ -393,7 +393,7 @@ Sally from Accounting sees an urgent email from her coworker (a similar, but fak
 
 ## MITRE Layout:
 - Impersonation as coworker using fake email. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/) and [T1566](https://attack.mitre.org/techniques/T1566/).
-- Listen on TCP port and open reverse shell. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/).
+- Listen on TCP port and open reverse shell. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/), [T1059.001](https://attack.mitre.org/techniques/T1059/001/) and [T1059.004](https://attack.mitre.org/techniques/T1059/004/).
 
 ## Pre-Incident Setup:
 - Add/change `filebeat.yml` input config to have `PowerShellCore/Operational` to support PowerShell >=7.4.
