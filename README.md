@@ -385,7 +385,7 @@ Additionally, once you load up Windows, you can debloat it using [the instructio
 # Incident #1: Attack Story and Kill Chain Diagram
 <strong>Under construction. This area is for my own personal notes for future steps of the project! Stay tuned :)</strong>
 
-Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to open a TCP port on her device. Unbeknownst to Sally, the open port she opens exposes her to a reverse shell vulnerability. The hacker sends a payload to the listening port which opens the reverse shell on the attackers' system; SOC is notified of the listening port and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps`. Kill any processes that may be malicious. 
+Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to send a payload to a specific port on a remote machine. Unbeknownst to Sally, the payload was sent to the attackers' machine, which opened up a reverse shell on the attackers' system. SOC is notified of the PowerShell activity and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps` and employ appropriate incident response measures.
 
 ## MITRE Layout:
 - Impersonation as coworker using fake email. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/) and [T1566](https://attack.mitre.org/techniques/T1566/).
