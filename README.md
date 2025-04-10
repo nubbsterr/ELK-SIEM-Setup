@@ -58,9 +58,9 @@ To set up the OS on our VM:
 1. Select your language accordingly. ![Select a Language](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/select-language.png)
 2. If you get an "installer update" notice, you can skip it as you wish.
 3. <strong>Record the IP shown next to DHCPv4, we will need this!</strong>
-4. We don't need a proxy, so we can skip configuring one. We also don't need an alternative mirror for Ubuntu.
+4. We don't need a proxy, so we can skip configuring one. We also don't need an alternative mirror for Ubuntu, so leave everything there as is.
 5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) ![Storage Conig](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
-6. Confirm your user credentials and SSH setup. We don't need any featured software on our VM, so continue with the installation. ![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
+6. Confirm your user credentials and SSH setup, tick the OpenSSH Server Box. We don't need any featured software on our VM, so continue with the installation. ![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
 7. Wait for the OS install to complete :) ![](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/waiting-for-install.png)
 
 Congrats! You're one step closer to a lovely homelab setup. Let's continue to our next step of our journey; installing and Configuring Elasticsearch.
@@ -68,7 +68,7 @@ Congrats! You're one step closer to a lovely homelab setup. Let's continue to ou
 # Installing and Configuring Elasticsearch
 Before we even get to starting anything, go into your VirtualBox menu and select the 3 bars next to your VM, then select `Snapshots`. Click `Take` and name the snapshot however you like. Congratulations, you have just implemented a failsafe in case you break your VM somehow. <strong>I strongly recommend you regularly take snapshots of your VM when you reach checkpoints in this guide.</strong>
 
-Once you reboot your system, continue to logging in as your user. When you're in, your screen should look something like this:
+Once you reboot your system, wait for your log statements to stop, then press Enter. Continue to logging in as your user. When you're in, your screen should look something like this:
 ![Voila](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/login-complete.png)
 
 The last thing we need to do before getting to real SIEM setup fun is to update our system with the following commands:
@@ -124,7 +124,7 @@ We will want to confirm that Elasticsearch is actually on our system, so run `su
 
 Real talk, I included that typo to show that I am human just like you. Creating this guide is both for my learning and so you can get a lovely homelab setup to enjoy cybersec :) With that being said, we are officially finished the installation phase for Elasticsearch and will now get to configuring it.
 
-# Configuring Elasticsearch and Running the Cluster
+# Configuring Elasticsearch and Testing It Out
 This step is entirely for configuring Elasticsearch; telling it how to run, what ports it needs, communication, etc.
 
 Open `/etc/elasticsearch/elasticsearch.yml` in a text editor (neovim da goat). If you are using a terminal editor like me, run `sudo EDITOR_OF_CHOICE ELASTICSEARCH.YML PATH`. Firstly, we will edit the cluster.name property to be the name of your choice for your homelab. 
@@ -146,14 +146,13 @@ Configuring Kibana starts with installing it; run `sudo apt install kibana -y`.
 
 Next we will update the YML configuration of Kibana just like we did with Elasticsearch. In my case of running Vim as my editor, run `sudo vim /etc/kibana/kibana.yml`.
 
-We will leave the `server.port` property alone as port 5601 is the default option and we have no need to edit it. We will edit the `server.host` and `server.name` properties to be our IP address and an appropriate name respectively. One thing I did notice is that you can adjust the credentials for accessing the Kibana server. You can leave them blank since Elasticsearch will require you to authenticate before touching anything with Kibana, but certainly for production/entreprise environments this is worth changing.
+We will leave the `server.port` property alone as port 5601 is the default option and we have no need to edit it. We will edit the `server.host` and `server.name` properties to be our IP address and an appropriate name respectively. One thing you may notice is that you can adjust the credentials for accessing the Kibana server. You can leave them blank for now, as we will change them later on.
 ![Our edits.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/kibana-config.png)
 ![Default credentials are a big nono!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/kibana-nono-security.png)
 
 Save and exit our changes to the YML file and go ahead and start up the Kibana service. If you're like me and have Elasticsearch not enabled in systemd, you will need to start it up in the following order:
 1. Start Elasticsearch w/ `sudo systemctl start elasticsearch` if not already started.
-2. <strong>Recall that if you make edits to the Elasticsearch.yml configuration, you must run `sudo systemctl restart elasticsearch` to enable your changes.</strong>
-3. Since we have started Elasticsearch and/or updated it, we can go ahead and start Kibana w/ `sudo systemctl start kibana`. We can also make Kibana run on boot w/ `sudo systemctl enable kibana`.
+2. Start Kibana w/ `sudo systemctl start kibana`. We can also make Kibana run on boot w/ `sudo systemctl enable kibana`.
 
 Now, contrary to the very odd guide posted as the "massive installation/setup guide below", we do <strong>not</strong> need to restart Elasticsearch whenever we run Kibana; we only need to restart it when we make changes to its configurations.
 
@@ -206,8 +205,8 @@ With that being said, we're done here! To shut everything down, run:
 
 If you aren't leaving, then we'll get going to the next step; establishing a CA.
 
-# Intermission: Establishing Elastic component IPs and Understanding CAs
-Our first step with making a CA is to understand why we are doing it. We are making a CA so we can implement TLS, thus HTTPS into our Elastic components, and that requires certificates.
+# Intermission: Establishing Elastic Services IPs and Understanding Certificate Authorities
+Our first step with making a CA is to understand why we are doing it. We are making a CA so we can implement [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security), thus HTTPS into our Elastic services, and that requires certificates.
 
 Firstly, we need to specify the instances of our services so we can later grant them a certificate. Navigate to `/usr/share/elasticsearch` and create a file called `instances.yml` by running `sudo touch instances.yml` and then opening it in a text editor. This file will hold information regarding what Elastic components we are using and their host IPs.
 ![Creating the file in the directory.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/creating-instances-yml.png)
@@ -400,7 +399,7 @@ Sally from Accounting sees an urgent email from her coworker (a similar, but fak
 - Listen on TCP port and open reverse shell. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/), [T1059.001](https://attack.mitre.org/techniques/T1059/001/) and [T1059.004](https://attack.mitre.org/techniques/T1059/004/).
 
 ## Pre-Incident Setup:
-- Add/change `filebeat.yml` input config to have `PowerShellCore/Operational` to support PowerShell >=7.4.
+- Add `filebeat` input in `filebeat.yml` config to have `PowerShellCore/Operational` as name to support PowerShell >=7.4. Same `event_id` and `type`.
 - Ensure log data is being sent to Elastic server.
 - Ensure your Windows VM is updated and can run PowerShell.
 
