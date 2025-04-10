@@ -205,7 +205,7 @@ With that being said, we're done here! To shut everything down, run:
 
 If you aren't leaving, then we'll get going to the next step; establishing a CA.
 
-# Intermission: Establishing Elastic Services IPs and Understanding Certificate Authorities
+# Establishing Elastic Services IPs and Understanding Certificate Authorities
 Our first step with making a CA is to understand why we are doing it. We are making a CA so we can implement [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security), thus HTTPS into our Elastic services, and that requires certificates.
 
 Firstly, we need to specify the instances of our services so we can later grant them a certificate. Navigate to `/usr/share/elasticsearch` and create a file called `instances.yml` by running `sudo touch instances.yml` and then opening it in a text editor. This file will hold information regarding what Elastic components we are using and their host IPs.
@@ -224,7 +224,7 @@ Navigate to `/usr/share/elasticsearch` and run the following: `sudo /usr/share/e
 
 Awesome sauce. We now have a zip file of our our CA certificate and private key. Unzip the zip folder with `sudo unzip ./elastic-stack-ca.zip`. You should have a `ca/` directory with a certificate file and private key. Our next step is to generate the certificate to sign for each of our instances.
 
-Generate the certificate with the following command: `sudo /usr/share/elasticsearch/bin/elasticsearch-certutil cert --ca-cert ca/ca.crt --ca-key ca/ca.key --pem --in instances.yml -- out cert.zip`. Let me make this shrimple to understand:
+Generate the certificate with the following command: `sudo /usr/share/elasticsearch/bin/elasticsearch-certutil cert --ca-cert ca/ca.crt --ca-key ca/ca.key --pem --in instances.yml --out cert.zip`. Let me make this shrimple to understand:
 1. We use the certutil and assign the CA certificate and private key from our unzipped files.
 2. Everything is set to the PEM format, given the `--pem` option.
 3. `--in instances.yml` is going to effectively use each instance specified in `instances.yml` and generate its certificate, private key and the CA certificate.
@@ -264,7 +264,7 @@ We'll begin by navigating to `/usr/share` and run the following commands:
 1. `sudo chown -R elasticsearch:elasticsearch elasticsearch/`, which will 1) Recursively set the ownership of the `elasticsearch` directory to Elasticsearch and 2) Change its group to the `elasticsearch` group, which will further allow us to limit the scope of Elasticsearch's permissions.
 2. `sudo chown -R elasticsearch:elasticsearch /etc/elasticsearch/certs/ca`. Same stuff as above but now for Elasticsearch's CA copies, so it can access that directory as well.
 
-<strong>Now I cannot make myself any clear that you must NOT do this `chown` privilege restriction to Kibana FOR ANY REASON. Kibaan needs access to its CA files to serve the SIEM frontend.</strong>
+<strong>Now I cannot make myself any clear that you must NOT do this `chown` privilege restriction to Kibana FOR ANY REASON. Kibana needs access to its CA files to serve the SIEM frontend in your web browser.</strong>
 
 Now, to ensure our posture is correct and our certificates are valid, we will use the `openssl` command to print certificate information to the console with the following command: `sudo openssl x509 -in /etc/elasticsearch/certs/elasticsearch.crt -text -noout`, which will: 
 1. Print information for X509 certificates.
@@ -272,8 +272,6 @@ Now, to ensure our posture is correct and our certificates are valid, we will us
 3. `-text`  ouputs everything as human-readable.
 4. `-noout` suppresses the output of the encoded version of the certificate; only shows the human-readbale output above.
 ![Success.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-chown-success.png)
-
-Then we rerun the above command to check our certificate status: `sudo openssl x509 -in /etc/kibana/certs/kibana.crt -text -noout`. And with that, we have both of our services with, effectively, least privilege.
 
 # Configuring The Services To Run HTTTPS w/ SSL Certificates
 Now we are effectively ready to put everything together, and enable SSL on all of our services, thereby enabling HTTPS. 
@@ -346,17 +344,33 @@ To generate credentials, we will use the [elasticsearch-setup-passwords](https:/
 
 Run `sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto` to randomly generate passwords, set the passwords of select users, and output them to the console. Make sure Elasticsearch is running before you do this or else you will get an error. You will see many passwords and names associated with them. For example, `apm_system` is the [APM or Application Performance Montioring System](https://www.elastic.co/guide/en/observability/current/apm.html), which, per its name, collects performance metrics for services and applications running in real-time, and is built on the Elastic Stack. More information about these users can be collected here by [Elastic's official documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-users.html)
 
-We only need the `kibana_system` password as that is how we will log in to our frontend UI and access our SIEM. Authentication to Elasticsearch is proxied by Kibana as well, so we can get away with doing this just fine. Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Change the `elasticsearch.password` to the password we just generated and change the `elasticsearch.username` property to a username of your choice. 
+We only need the `kibana_system` password as that is how we will log in to our frontend UI and access our SIEM. Authentication to Elasticsearch is proxied by Kibana as well, so we can get away with doing this just fine. Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Change the `elasticsearch.password` to the password we just generated and <strong>DO NOT CHANGE THE `elasticsearch.username` PROPERTY. You will get error logs back when the server attempts to launch to host the frontend!</strong>
 
-Save and exit our YML config file and restart Kibana so that our new configuration settings are read properly with `sudo systemctl restart kibana`.
+Save and exit our YML config file and restart Kibana so that our new configuration settings are read properly with `sudo systemctl restart kibana && sudo systemctl restart elasticsearch`.
 
-And with that, we are ready to log into our SIEM frontend for the first time! Congrats for remaining focused and sticking with me this far; your hard work and persistence is paying off :) If you want to shut down your system for the day, we can do so by stopping Kibana then Elasticsearch by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`.
+And with that, we are ready to log into our SIEM frontend for the first time!
 
 # Logging into Elastic
-Firstly, start up Elasticsearch and Kibana if you haven't already with `sudo systemctl start elasticsearch` and `sudo systemctl start kibana`. The fun part starts now.
+Firstly, start up Elasticsearch and Kibana if you haven't already with `sudo systemctl start elasticsearch`, `sudo systemctl start kibana` and `sudo systemctl start filebeat`. The fun part starts now.
 
-Open your web browser on your host machine and navigate to `https://KIBANA_HOST_IP:5601`. `5601` is the port Kibana operates on, which hosts the frontend UI for our SIEM. 
+Secondly, we can't actually access our frontend just yet. We actually need to create a port forwarding rule, Fun fact, `10.0.2.15:5601` is hosted on the SERVER, but not publicly accessible to US. We need to redirect, or otherwise, <strong>forward</strong>, the traffic to us so we can recieve it.
 
+Open your Network settings as we did long ago to configure SSH's port forwaring. Create a new rule with the little 'Plus' icon on the right with the following specifications:
+- Protocol: TCP
+- Host IP: 127.0.0.1 
+- Host Port: 5601
+- Guest IP: `YOUR_KIBANA_IP`
+- Gust Port: 5601
+
+`YOUR_KIBANA_IP` is the IP you are hosting the Kibana server on, which is shown in both Kibana's log files and the `kibana.yml` configuration. Once you've created the rule, you can attempt to head to your frontend in your web browser at `https://127.0.0.1:5601` if your VM is powered on and your services are running.
+![Waiting....](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/frontend-loading.png)
+
+The loading may take a while; just be patient...
+![A FRONTEND????????????](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/frontend-loaded.png)
+
+Many hours, days, a VM restart, and many sweaty, hair-pulling moments have finally led both me and <strong>you</strong> to this moment! We have a frontend!
+
+# Understanding Fleet and Creating a Fleet Server
 To be continued...
 
 # Intermission: Setting up a Kali Linux VM w/ VirtualBox
