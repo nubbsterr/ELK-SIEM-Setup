@@ -405,17 +405,31 @@ Otherwise, we can continue and make a Local Account with out desired credentials
 
 Additionally, once you load up Windows, you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat). This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
 
+# Intermission: Simulating Events in a Controlled Environment
+The following 2 sections will go over running simulated incidents and triaging them through our SIEM. These sections are highly recommended to go through but totally optional! However, they will prove a fine amount of competence with root-cause analysis, incident response, how to triage attacks and how to map an incident with both the Kill Chain framework and MITRE ATT&CK Entreprise matrix. Simply put, there is a lot of info to unpack, but it is well worth your time!
+
+Read through the attack story, understand the TTPs at play, and run through each pre-incident step in preparation for running the attack! When your ready, I will guide you through the incident; how to simulate, triage and respond to the incident in a professional manner.
+
 # Incident #1: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
-Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to send a payload to a specific port on a remote machine. Unbeknownst to Sally, the payload was sent to the attackers' machine, which opened up a reverse shell on the attackers' system. SOC is notified of the PowerShell activity and immediately isolates her system from the network and checking for potential connections using `netstat`, `lsof` and `ps` and employ appropriate incident response measures.
+Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to 1) Shut off Windows Defender and 2) Run a pre-configured script in her PowerShell terminal... 
+
+Unbeknownst to Sally, the payload she runs in her PowerShell terminal opens a reverse shell on the attackers' machine. SOC was notified of Defender being shut off but also the script being ran in PowerShell. 
 
 ## MITRE Layout:
+The MITRE Layout segments parts of the attack and associates them with their respective TTP(s) or Tactics, Techniques, and Procedures. This attack contains the following TTPs:
+
 - Impersonation as coworker using fake email. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/) and [T1566](https://attack.mitre.org/techniques/T1566/).
 - Listen on TCP port and open reverse shell. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/), [T1059.001](https://attack.mitre.org/techniques/T1059/001/) and [T1059.004](https://attack.mitre.org/techniques/T1059/004/).
 
 ## Pre-Incident Setup:
 - Add `filebeat` input in `filebeat.yml` config to have `PowerShellCore/Operational` as name to support PowerShell >=7.4. Same `event_id` and `type`.
+- Add `filebeat` input in `filebeat.yml` config to capture Windows Defender activity; being shut off/disabled. 
 - Ensure log data is being sent to Elastic server.
 - Ensure your Windows VM is updated and can run PowerShell.
+- Know how to create a listener port on your machine; I will be using my host machine running Linux; run `nc -nvlp <port_number>` to listen on Linux.
+- Ensure you are running NAT network connection on the VM in VirtualBox settings! Both machines should be on the same subnet as well (your host machine and the VM running it, in my case.)
+- Ensure you can `ping` both machines. Ping Windows VM from host; host from Windows VM.
+- <strong>Have the payload script ready with the given port and IP of the host machine you are listening on!</strong>
 
 ## Kill Chain Diagram, Made Using Excalidraw
 ![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/ReverseShellKillChain.png)
@@ -427,13 +441,17 @@ To be continued...
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
 
 ## MITRE Layout:
+The MITRE Layout segments parts of the attack and associates them with their respective TTP(s) or Tactics, Techniques, and Procedures. This attack contains the following TTPs:
+
 - Posing as IT/Help Desk. [T1656](https://attack.mitre.org/versions/v14/techniques/T1656/).
 - User executes IEX command per Help Desk's response. [T1204](https://attack.mitre.org/versions/v14/techniques/T1204/).
 - Data is locally collected and stored locally. [T1074.001](https://attack.mitre.org/techniques/T1074/001/).
 - Data exfilration to Discord server using internet (Discord on the Web). [T1020](https://attack.mitre.org/techniques/T1020/) and [T1567](https://attack.mitre.org/techniques/T1567/).
 
-## Inital Windows Setup
-- Same steps as Incident #1. Scroll up :)
+## Pre-incident Setup
+- Make sure the Windows VM is updated and can run PowerShell.
+- Have the payload script ready and configuring to download at the right website; TBD. 
+- Ensure log data is being sent to Elastic server.
 
 ## Kill Chain Diagram, Made Using Excalidraw
 ![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/IEX-IWRKillChain.png)
