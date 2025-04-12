@@ -11,7 +11,7 @@ That is all :)
 
 As stated above, there are many sources I consulted, all of which will be linked below for your own reading. The following will be a step-by-step guide of me <strong>creating my own SIEM</strong> using Oracle VirtualBox, Elastissearch, Beats and Kibana for indexing/analyzing, ingesting and visualizing our log data respectively.
 
-This guide is aimed to be very step-by-step oriented; I guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32.
+This guide is aimed to be very step-by-step oriented; I guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. Big thanks to `UncleFrikus` for also helping me both test my guide but also troubleshoot issues along the way :)
 
 Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. 
 
@@ -36,6 +36,8 @@ By the end of this project, <strong>you are going to know a lot of stuff</strong
 - Understand how Elasticsearch, Beats and Kibana work together to create a SIEM.
 - Understand what a [CA](https://en.wikipedia.org/wiki/Certificate_authority) is, the signing process, and how SSL certificates function.
 - Establish simulated attacks in a controlled environment and employ root cause analysis.
+- Understand how Active Directory works at a very basic level with Domains, DCs, DAs, etc. by deploying GOAD-mini on a Windows VM.
+- Understanding how Atomic Red Team tests can be used for defensive purposes to enhance security postures.
 - Understand [MITRE ATT&CK](https://attack.mitre.org/) and using it to show TTPs of an attack.
 - Understand the [Kill Chain framework](https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html); understand the attacker POV.
 - Understand incident response measures for triaging attacks.
@@ -344,7 +346,9 @@ To generate credentials, we will use the [elasticsearch-setup-passwords](https:/
 
 Run `sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto` to randomly generate passwords, set the passwords of select users, and output them to the console. Make sure Elasticsearch is running before you do this or else you will get an error. You will see many passwords and names associated with them. For example, `apm_system` is the [APM or Application Performance Montioring System](https://www.elastic.co/guide/en/observability/current/apm.html), which, per its name, collects performance metrics for services and applications running in real-time, and is built on the Elastic Stack. More information about these users can be collected here by [Elastic's official documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-users.html)
 
-We only need the `kibana_system` password as that is how we will log in to our frontend UI and access our SIEM. Authentication to Elasticsearch is proxied by Kibana as well, so we can get away with doing this just fine. Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Change the `elasticsearch.password` to the password we just generated and <strong>DO NOT CHANGE THE `elasticsearch.username` PROPERTY. You will get error logs back when the server attempts to launch to host the frontend!</strong>
+We only need the `kibana_system` password as Kibana authenticates through Elasticsearch and thus grants access to the frontend UI. <strong>However,</strong> we will need to create our own user with prvilieges to login to the SIEM frontend after we initially login using the <strong>`elastic` superuser</strong>. It's credentials will be `elastic` as its username and `<generated_password>` from the previous step when we generated new passwords.
+
+Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Change the `elasticsearch.password` to the password we just generated and <strong>DO NOT CHANGE THE `elasticsearch.username` PROPERTY. You will get error logs back when the server attempts to launch to host the frontend!</strong>
 
 Save and exit our YML config file and restart Kibana so that our new configuration settings are read properly with `sudo systemctl restart kibana && sudo systemctl restart elasticsearch`.
 
@@ -368,7 +372,27 @@ Open your Network settings as we did long ago to configure SSH's port forwaring.
 The loading may take a while; just be patient...
 ![A FRONTEND????????????](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/frontend-loaded.png)
 
+Now we login using our <strong>`elastic` superuser credentials</strong> and NOT the `kibana_system` user.
+![IT WORKED!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-login-success.png)
+
 Many hours, days, a VM restart, and many sweaty, hair-pulling moments have finally led both me and <strong>you</strong> to this moment! We have a frontend!
+
+# Intermission: Creating Our Own User
+Click the `Explore on my own` button to continue to the Elastic UI. Once we're in, our sole goal is to create an admin user for ourself, so that we don't need to log in to the `elastic` superuser every time.
+
+Given the steps in the [Official Elastic Docs](https://www.elastic.co/guide/en/kibana/8.17/using-kibana-with-security.html), we will go to the Roles management page and create a new user with the `kibana_admin` role; to grant us admin access to the Kibana; by extension, the SIEM frontend.
+
+Scroll down and click the `Manage Permissions` button. On the sidebar to the left, Click `Users` under `Security`. This is where we want to be.
+![User page!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/users-page-success.png)
+
+Click the `Create User` button, and set up the credentials as needed. <strong>For privileges, select the following roles:</strong>
+- beats_admin
+- kibana_admin
+
+More information about privileges can be found [here in the Elastic Docs!](https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-roles.html) To ensure that our account actually works, we will attempt to login to it on the Elastic login page. Logout then log back in using our new user.
+![Nice!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/new-user-success.png)
+
+We are now ready to move on! If we ever need to modify our account privileges, we will simply login using the `elastic` superuser again and modify our roles as needed.
 
 # Understanding Fleet and Creating a Fleet Server
 To be continued...
@@ -408,7 +432,7 @@ Additionally, once you load up Windows, you can debloat it using [the instructio
 # Intermission: Simulating Events in a Controlled Environment
 The following 2 sections will go over running simulated incidents and triaging them through our SIEM. These sections are highly recommended to go through but totally optional! However, they will prove a fine amount of competence with root-cause analysis, incident response, how to triage attacks and how to map an incident with both the Kill Chain framework and MITRE ATT&CK Entreprise matrix. Simply put, there is a lot of info to unpack, but it is well worth your time!
 
-Read through the attack story, understand the TTPs at play, and run through each pre-incident step in preparation for running the attack! When your ready, I will guide you through the incident; how to simulate, triage and respond to the incident in a professional manner.
+Read through the attack story, understand the TTPs at play, and run through each pre-incident step in preparation for running the attack! When your ready, I will guide you through the incident; how to simulate, triage and respond to the incident in a professional manner. The last incident is rather difficult; it is far more nuanced and goes over many TTPs and contains more setup. I wouldn't blame you if you skip it, but if you don't you will learn a TON from it.
 
 # Incident #1: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
 Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to 1) Shut off Windows Defender and 2) Run a pre-configured script in her PowerShell terminal... 
@@ -455,6 +479,30 @@ The MITRE Layout segments parts of the attack and associates them with their res
 
 ## Kill Chain Diagram, Made Using Excalidraw
 ![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/IEX-IWRKillChain.png)
+
+## Incident Steps
+To be continued...
+ 
+# Incident #3: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
+A NTLM brute force attack is attempted on a Domain Controller (DC) in an Active Directory environment. SOC is immediately notified of suspicious logs indicating failed login attempts. The attacker used both `PowerView` and `BloodHound` to perform domain enumeration to 1) Get inital domain information then 2) Perform domain enumeration while avoiding DCs to raise suspicion using `Invoke-BloodHound --ExcludeDCs`. The user had already had Local Admin access on a separate user machine and manages to reach the DC through other trust domains with stored credentials.
+
+## MITRE Layout:
+The MITRE Layout segments parts of the attack and associates them with their respective TTP(s) or Tactics, Techniques, and Procedures. This attack contains the following TTPs:
+
+- Domain enumeration using `PowerView` and `BloodHound`. [T1106](https://attack.mitre.org/techniques/T1106/) and [T1599](https://attack.mitre.org/techniques/T1590).
+- Compromise domain via Local Admin user with guessed credentials to continue escalating privileges through domain trust. [T1584.001](https://attack.mitre.org/techniques/T1584/001), [T1078.002](https://attack.mitre.org/techniques/T1078/002/) and [T1482](https://attack.mitre.org/techniques/T1482).
+- Attempted brute force on Domain Controller server. [T110.001](https://attack.mitre.org/techniques/T1110/003/)
+
+
+## Pre-incident Setup
+- Specifically for this incident, we will show the # of failed logins on our domain for a given account on our Kibana dashboard. (Steps TBD)
+- Make sure the Windows VM is updated and can run PowerShell.
+- Have GOAD-mini up and running. DC is already available.
+- Set up the brute force script in accordance to the [Atomic Red Team documentation.](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1110.001/T1110.001.md#atomic-test-2---brute-force-credentials-of-single-active-directory-domain-user-via-ldap-against-domain-controller-ntlm-or-kerberos)
+- Ensure log data is being sent to Elastic server.
+
+## Kill Chain Diagram, Made Using Excalidraw
+![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/BruteForceDCKillChain.png)
 
 ## Incident Steps
 To be continued...
