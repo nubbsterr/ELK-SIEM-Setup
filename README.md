@@ -1,34 +1,27 @@
 # Elastic-SIEM-Setup
 A guide for building your own SIEM using the Elasticsearch, Beats, and Kibana, and how to simulate, analyze and triage attacks for a homelab. Courtesy of the internet and other sources.
 
-# A Very Friendly Warning
-Given that this is still being developed, nothing is final. If you are going step-by-step in this guide assuming its <strong>unfinished form</strong> (that is, using this guide before it is totally complete), be warned that you may 1) ruin your final build or 2) waste a lot of time on unneeded steps or 3) have to restart like I did because of a funny mistake.
+# Preface And Shoutouts
+<strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the Elastic services.
 
-That is all :)
+This guide is aimed to be very step-by-step oriented; my goal is to guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. Big thanks to `UncleFrikus` for also helping me both test my guide but also troubleshoot issues along the way :)
 
-# Preface
-<strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the Elastic 'technologies'.
+Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any important documentation as needed. Other bits of documentation are hyperlinked throughout the guide and are optional to read but highly recommended for your own understanding.
 
-As stated above, there are many sources I consulted, all of which will be linked below for your own reading. The following will be a step-by-step guide of me <strong>creating my own SIEM</strong> using Oracle VirtualBox, Elastissearch, Beats and Kibana for indexing/analyzing, ingesting and visualizing our log data respectively.
+Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, `systemctl`, etc. Naturally, I will guide you as much as I can, but if anything is confusing you, it can be: 
+1. Voiced to me. Yes, you can message me on Discord or via email with questions. 
+2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s) so you don't fool yourself.
 
-This guide is aimed to be very step-by-step oriented; I guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. Big thanks to `UncleFrikus` for also helping me both test my guide but also troubleshoot issues along the way :)
-
-Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any minor comments and important documentation. Sources are listed in a pseudo-priority order; ordered in what I consider is most important to consult if you wish to seek info regarding certain topics of this guide. 
-
-Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, `systemctl`, etc. Naturally, I will guide you as much as I can, and whatever I cannot guide you through or struggle with can either be: 
-1. Voiced to me. Yes, you can message me on Discord or via email. 
-2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s).
-
-With that being siad, if you would like to contribute to this repo, feel free to message me or make a PR to the repo!
+With that being said, if you would like to contribute to this repo, feel free to message me or make a PR to the repo!
 
 # SIEM Features
 <strong>Basic features</strong> should include:
 - Log ingestion and indexing
 - Log parsing/querying
-- Dashboards
+- Dashboards w/ quantitative and qualitative visuals
 - Alerts
 
-Other features like event correlation, root cause analysis, ML and whatnot are achieved in more advanced software like EDRs and XDRs, which we will not be making anytime soon.
+Other features like event correlation, root cause analysis, ML and whatnot are achieved in more advanced software like EDRs and XDRs, which we will not be making anytime.
 
 # What You Will Learn!
 By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
@@ -45,7 +38,7 @@ By the end of this project, <strong>you are going to know a lot of stuff</strong
 # The Setup Begins
 This is our first step into our SIEM-building journey. 
 
-First things first, we will get a VM set up using VirtualBox. Because I am such a nice kiddo, <strong>I have a bash script made to install VirtualBox 7.1 for Ubuntu linked on this repo :)</strong> Sources are linked below specifically for this setup.
+First things first, we need a VM to host our services. We'll be using VirtualBox for just that. Because I am such a nice kiddo, <strong>I have a bash script made to install VirtualBox 7.1 for Ubuntu linked on this repo :)</strong> Sources are linked below specifically for this setup.
 
 Once VirtualBox is set up, we can install an ISO for our VM; preferably Linux. I am running an [Ubuntu Server VM](https://releases.ubuntu.com/bionic/). 
 
@@ -105,8 +98,6 @@ What this basically means is that whenever I send a TCP request to port 2222 on 
 Moment of truth, we should be able to `ssh` given any IP address and on port 2222. Run `ssh -p 2222 SERVER_USERNAME@127.0.0.1` and hope for the best!
 ![This took me like 20-30 minutes.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/ssh-success.png)
 
-Success! We can now continue setting up our VM, or be like me and shutdown everything and chill :)
-
 # Continuing to setup Elasticsearch
 <strong>The horrors persist but so do we, let's continue!</strong> If your VM is not running right now, go and start it up. We'll SSH in just like before and get straight to business.
 
@@ -121,10 +112,10 @@ Success! Update our packages then install elasticsearch. Run `sudo apt update -y
 
 Now that Elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files.
 
-We will want to confirm that Elasticsearch is actually on our system, so run `sudo systemctl status elasticsearch.service`, we preferably want to see a 'dead' process.
+We will want to confirm that Elasticsearch is actually on our system, so run `sudo systemctl status elasticsearch.service`; we want to see a 'dead' process.
 ![Yes I did a typo.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-success.png)
 
-Real talk, I included that typo to show that I am human just like you. Creating this guide is both for my learning and so you can get a lovely homelab setup to enjoy cybersec :) With that being said, we are officially finished the installation phase for Elasticsearch and will now get to configuring it.
+With that all said and done, we are officially finished the installation phase for Elasticsearch and will now get to configuring it.
 
 # Configuring Elasticsearch and Testing It Out
 This step is entirely for configuring Elasticsearch; telling it how to run, what ports it needs, communication, etc.
@@ -139,7 +130,7 @@ Once we are done, go ahead and close the YML file. Congrats, our config work her
 Run `sudo systemctl start elasticsearch` and wait a lil for the command to complete. We can also run `sudo systemctl enable elasticsearch` to automatically start the service on boot of our VM, if you wish. Once the command completes, run `curl --get http://NETWORK_HOST_IP:9200`. NETWORK_HOST_IP is the network.host IP we have in our config file!
 ![We got something!!!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-curl-success.png)
 
-Congratulations, we just set up Elasticsearch and can confirm that a cluster is up and running. 9200 is where we will send all of our logged data to; from Beats or Elastic Agents if you go down that route. Our next step is setting up Kibana in the same manner.
+Congratulations, we just set up Elasticsearch and can confirm that a cluster is up and running. Port 9200 is where we will send all of our logged data to; from Beats or Elastic Agents if you go down that route. Our next step is setting up Kibana in the same manner.
 
 If you ever want to edit the `elasticsearch.yml` configuration on your own time, <strong>you will need to run `sudo systemctl restart elasticsearch.service` so that the updated configuarion is read by Elasticsearch.</strong>
 
@@ -155,8 +146,6 @@ We will leave the `server.port` property alone as port 5601 is the default optio
 Save and exit our changes to the YML file and go ahead and start up the Kibana service. If you're like me and have Elasticsearch not enabled in systemd, you will need to start it up in the following order:
 1. Start Elasticsearch w/ `sudo systemctl start elasticsearch` if not already started.
 2. Start Kibana w/ `sudo systemctl start kibana`. We can also make Kibana run on boot w/ `sudo systemctl enable kibana`.
-
-Now, contrary to the very odd guide posted as the "massive installation/setup guide below", we do <strong>not</strong> need to restart Elasticsearch whenever we run Kibana; we only need to restart it when we make changes to its configurations.
 
 Once both Elasticsearch and Kibana are running, we will go ahead and check the status of both services by running `sudo systemctl status elasticsearch && sudo systemctl status kibana`.
 ![Both services running just fine.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-kibana-success.png)
@@ -461,6 +450,15 @@ The MITRE Layout segments parts of the attack and associates them with their res
 ## Incident Steps
 To be continued...
 
+## Incidence Response
+To be continued...
+
+## Post-Incident Report
+The post-incident report will contain:
+1. Root cause analysis; what started the attack, what caused the chain of events. 
+2. Summary of the actions taken by SOC as incidence response.
+3. Mitigations for similar future attacks; enhance security posture.
+
 # Incident #2: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
 
@@ -483,8 +481,17 @@ The MITRE Layout segments parts of the attack and associates them with their res
 ## Incident Steps
 To be continued...
  
+## Incidence Response
+To be continued...
+
+## Post-Incident Report
+The post-incident report will contain:
+1. Root cause analysis; what started the attack, what caused the chain of events. 
+2. Summary of the actions taken by SOC as incidence response.
+3. Mitigations for similar future attacks; enhance security posture.
+
 # Incident #3: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
-A NTLM brute force attack is attempted on a Domain Controller (DC) in an Active Directory environment. SOC is immediately notified of suspicious logs indicating failed login attempts. The attacker used both `PowerView` and `BloodHound` to perform domain enumeration to 1) Get inital domain information then 2) Perform domain enumeration while avoiding DCs to raise suspicion using `Invoke-BloodHound --ExcludeDCs`. The user had already had Local Admin access on a separate user machine and manages to reach the DC through other trust domains with stored credentials.
+A NTLM brute force attack is attempted on a Domain Controller (DC) in an Active Directory environment. SOC notices an increase in failed login attempts and LDAP queries. Prior to the brute force, the attacker used both `PowerView` and `BloodHound` to perform domain enumeration to 1) Get inital domain information then 2) Perform domain enumeration while avoiding DCs to raise suspicion using `Invoke-BloodHound --ExcludeDCs`. The user had already had Local Admin access on a separate user machine and manages to reach the DC through other trust domains with stored credentials.
 
 ## MITRE Layout:
 The MITRE Layout segments parts of the attack and associates them with their respective TTP(s) or Tactics, Techniques, and Procedures. This attack contains the following TTPs:
@@ -495,10 +502,10 @@ The MITRE Layout segments parts of the attack and associates them with their res
 
 
 ## Pre-incident Setup
-- Specifically for this incident, we will show the # of failed logins on our domain for a given account on our Kibana dashboard. (Steps TBD)
+- Specifically for this incident, we will show the # of failed logins on our domain for a given account on our Kibana dashboard; Steps TBD.
 - Make sure the Windows VM is updated and can run PowerShell.
 - Have GOAD-mini up and running. DC is already available.
-- Set up the brute force script in accordance to the [Atomic Red Team documentation.](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1110.001/T1110.001.md#atomic-test-2---brute-force-credentials-of-single-active-directory-domain-user-via-ldap-against-domain-controller-ntlm-or-kerberos)
+- Set up the brute force script in accordance to Atomic Red Team documentation; Steps TBD.
 - Ensure log data is being sent to Elastic server.
 
 ## Kill Chain Diagram, Made Using Excalidraw
@@ -506,6 +513,15 @@ The MITRE Layout segments parts of the attack and associates them with their res
 
 ## Incident Steps
 To be continued...
+
+## Incidence Response
+To be continued...
+
+## Post-Incident Report
+The post-incident report will contain:
+1. Root cause analysis; what started the attack, what caused the chain of events. 
+2. Summary of the actions taken by SOC as incidence response.
+3. Mitigations for similar future attacks; enhance security posture.
 
 # Sources
 - [MITRE ATT&CK Website for TTPs.](https://attack.mitre.org/)
