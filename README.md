@@ -190,8 +190,8 @@ Now if you're a complete dumby like me, and forgot to run `sudo filebeat setup`,
 That yellow healthcheck notice is nothing to worry about. To my knowledge, it is indicating that replica shards are unassigned, which basically means we are at risk of data loss, which we don't care about in our current state. No only that, we have no primary shards, since we have no indexed data, so <strong>we do not care.</strong>
 
 With that being said, we're done here! To shut everything down, run:
-1. `sudo systemctl stop kibana.service`
-2. `sudo systemctl stop filebeat.service`, <strong>this took a while so, once again, do NOT Ctrl+C.</strong>
+1. `sudo systemctl stop filebeat.service`, <strong>this took a while so, once again, do NOT Ctrl+C.</strong>
+2. `sudo systemctl stop kibana.service`
 3. `sudo systemctl stop elasticsearch.service`
 
 If you aren't leaving, then we'll get going to the next step; establishing a CA.
@@ -377,6 +377,7 @@ Scroll down and click the `Manage Permissions` button. On the sidebar to the lef
 Click the `Create User` button, and set up the credentials as needed. <strong>For privileges, select the following roles:</strong>
 - beats_admin
 - kibana_admin
+- superuser, to access Fleet Management
 
 More information about privileges can be found [here in the Elastic Docs!](https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-roles.html) To ensure that our account actually works, we will attempt to login to it on the Elastic login page. Logout then log back in using our new user.
 ![Nice!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/new-user-success.png)
@@ -384,6 +385,51 @@ More information about privileges can be found [here in the Elastic Docs!](https
 We are now ready to move on! If we ever need to modify our account privileges, we will simply login using the `elastic` superuser again and modify our roles as needed.
 
 # Understanding Fleet and Creating a Fleet Server
+Open the hamburger menu of the left of our UI and scroll to `Management` and click `Fleet`. 
+
+Fleet management will take some time to load, but once it is, we will configure our fleet server with the following options:
+![My fleet config.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/fleet-config.png)
+
+Click the `Add host` button and then generate our service token. I recommend taking a photo or saving this token SOMEWHERE because yes, you WILL forget it. Our next step is to actually get an Elastic Agent set up with Fleet.
+
+In your VM, `cd` into `/etc/fleet` and run the following command: 
+
+`sudo wget https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-7.17.6-linux-x86_64.tar.gz`
+
+Given that this is a tarball, we will need to extract its contents with the follwoing: 
+
+`sudo tar -xvf ./elastic-agent-7.17.6-linux-x86_64.tar.gz`
+
+Once that's done, we can delete the original tarball if we wish. Return back to our frontend. `cd` into `elastic-agent-7.17.6-linux-x86_64`. Now it's time to run the below commands to start our Fleet server, as shown on the frontend:
+
+```
+sudo ./elastic-agent install --url=https://10.0.2.15:8220 \
+  --fleet-server-es=https://10.0.2.15:9200 \
+  --fleet-server-service-token=YOUR_SERVICE_TOKEN \
+  --fleet-server-policy=499b5aa7-d214-5b5d-838b-3cd76469844e \
+  --certificate-authorities="/etc/fleet/certs/ca/ca,crt" \
+  --fleet-server-es-ca="/etc/elasticsearch/certs/elasticsearch.crt" \
+  --fleet-server-cert="/etc/fleet/certs/fleet.crt" \
+  --fleet-server-cert-key="/etc/fleet/certs/fleet.key"
+```
+
+I recommened pasting that entire command into a separate notepad and editting it; change the IP to match your Fleet server IP that we set earlier as well as the Elasticsearch IP and input your service token from before to replace `YOUR_SERVICE_TOKEN` in the above command. Paste the entire command into your terminal and hit Enter!
+![Yatta!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-agent-success.png)
+![Yippee!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/fleet-server-success.png)
+
+I had to restore my VM many times to snapshots because I made various typos that invalidated the server setup, but still installed the Agent. Simply put, I couldn't revert anything. <strong>Don't do that :)</strong>
+
+You will notice that we are able to upgrade our Fleet server, however I am not sure if that requires upgrades to our other services at this time. You may go ahead and attempt to upgrade the service but make snapshots and take your time!
+
+Let's continue on now. Click the `Fleet Settings` button in the top right corner of the UI. Change the Elasticsearch host from `localhost` to your Elasticsearch host IP. Save and Apply our changes and we're good to go to our next step of Agent Policies.
+
+If you do wish to shut down your server. You can do so with the following steps:
+1. `sudo systemctl stop filebeat.service`
+2. `sudo systemctl stop kibana.service`
+3. `sudo systemctl stop elasticsearch.service`
+4. `sudo systemctl stop elastic-agent`, this will stop the Elastic Agent from collecting log data on our host machine. We will deploy these agents to other machines soon!
+
+# Creating Agent Policies To Collect Logs
 To be continued...
 
 # Intermission: Setting up a Kali Linux VM w/ VirtualBox
@@ -455,9 +501,8 @@ To be continued...
 
 ## Post-Incident Report
 The post-incident report will contain:
-1. Root cause analysis; what started the attack, what caused the chain of events. 
-2. Summary of the actions taken by SOC as incidence response.
-3. Mitigations for similar future attacks; enhance security posture.
+1. Summary of the actions taken by SOC as incidence response.
+2. Mitigations for similar future attacks; enhance security posture.
 
 # Incident #2: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
@@ -486,9 +531,8 @@ To be continued...
 
 ## Post-Incident Report
 The post-incident report will contain:
-1. Root cause analysis; what started the attack, what caused the chain of events. 
-2. Summary of the actions taken by SOC as incidence response.
-3. Mitigations for similar future attacks; enhance security posture.
+1. Summary of the actions taken by SOC as incidence response.
+2. Mitigations for similar future attacks; enhance security posture.
 
 # Incident #3: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
 A NTLM brute force attack is attempted on a Domain Controller (DC) in an Active Directory environment. SOC notices an increase in failed login attempts and LDAP queries. Prior to the brute force, the attacker used both `PowerView` and `BloodHound` to perform domain enumeration to 1) Get inital domain information then 2) Perform domain enumeration while avoiding DCs to raise suspicion using `Invoke-BloodHound --ExcludeDCs`. The user had already had Local Admin access on a separate user machine and manages to reach the DC through other trust domains with stored credentials.
@@ -519,9 +563,8 @@ To be continued...
 
 ## Post-Incident Report
 The post-incident report will contain:
-1. Root cause analysis; what started the attack, what caused the chain of events. 
-2. Summary of the actions taken by SOC as incidence response.
-3. Mitigations for similar future attacks; enhance security posture.
+1. Summary of the actions taken by SOC as incidence response.
+2. Mitigations for similar future attacks; enhance security posture.
 
 # Sources
 - [MITRE ATT&CK Website for TTPs.](https://attack.mitre.org/)
