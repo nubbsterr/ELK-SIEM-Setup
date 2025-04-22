@@ -4,9 +4,16 @@ A guide for building your own SIEM using the Elasticsearch, Beats, and Kibana, a
 # Preface And Shoutouts
 <strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the Elastic services.
 
-This guide is aimed to be very step-by-step oriented; my goal is to guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. Big thanks to `UncleFrikus` for also helping me both test my guide but also troubleshoot issues along the way :)
+This guide is aimed to be very step-by-step oriented; my goal is to guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. 
 
-Furthermore, please check out the <strong>[Sources section](#sources)</strong> of this guide for any important documentation as needed. Other bits of documentation are hyperlinked throughout the guide and are optional to read but highly recommended for your own understanding.
+Big thanks to the following people as well:
+- `UncleFrikus` for also helping me both test my guide but also troubleshoot issues along the way :)
+- `Lavender 💜` for a lot of red team knowledge behind the scenes regarding C2s and maldev.
+- `Chroma` for also assisting me in red team but more so in blue team with understanding SOC; you helped me lots with this project with constructing the incidents.
+- `Eurofighter` for loads of red team knowledge, mainly having to do with maldev. You are the reason why I got into researching red team!!
+
+# Some Tips Before Diving In
+Please check out the <strong>[Sources section](#sources)</strong> of this guide for any important documentation as needed. Other bits of documentation are hyperlinked throughout the guide and are optional to read but highly recommended for your own understanding.
 
 Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, `systemctl`, etc. Naturally, I will guide you as much as I can, but if anything is confusing you, it can be: 
 1. Voiced to me. Yes, you can message me on Discord or via email with questions. 
@@ -446,7 +453,7 @@ Congrats, you have a Kali Linux VM running! Run the following commands to update
 3. `sudo apt autoremove`, remove any unneeded dependencies for packages to clean up a lil.
 
 # Intermission: Setting up a Windows 10 VM w/ VirtualBox
-1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your lnaguage as needed and wait for the download to complete.
+1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your language as needed and wait for the download to complete. If you get redirected to a different site because you're already running Windows, <strong>install the media creation tool and download an ISO image in the creation tool!</strong>
 2. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively. Select the previously installed Windows 10 ISO as your ISO image. Check the box to skip the 'Unattended Install' as well.
 ![Windows VM Config](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows=vm-config.png)
 3. Set up your system resources as you wish. Refer to the original Ubuntu VM setup instructions as needed. I have my VM set to run 4GB of RAM and 2 vCPUs/Processors.
@@ -462,14 +469,14 @@ Select the unallocated disk space, click 'Next', and wait for the install to com
 Otherwise, we can continue and make a Local Account with out desired credentials and set up security questions. Then we get to disable all of the spyware that Microsoft attempts to install or enable, <strong>say no to EVERYTHING.</strong> Cortana will annoy us once more before finally leaving us alone and letting the Windows install totally finish. 
 ![It's finally over...](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows-success.png)
 
-Additionally, once you load up Windows, you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat). This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
+Additionally, once you load up Windows, <strong>you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat).</strong> This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
 
 # Intermission: Simulating Events in a Controlled Environment
 The following 2 sections will go over running simulated incidents and triaging them through our SIEM. These sections are highly recommended to go through but totally optional! However, they will prove a fine amount of competence with root-cause analysis, incident response, how to triage attacks and how to map an incident with both the Kill Chain framework and MITRE ATT&CK Entreprise matrix. Simply put, there is a lot of info to unpack, but it is well worth your time!
 
 Read through the attack story, understand the TTPs at play, and run through each pre-incident step in preparation for running the attack! When your ready, I will guide you through the incident; how to simulate, triage and respond to the incident in a professional manner. The last incident is rather difficult; it is far more nuanced and goes over many TTPs and contains more setup. I wouldn't blame you if you skip it, but if you don't you will learn a TON from it.
 
-# Incident #1: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
+# Incident #1: Attack Story, TTPs, Kill Chain Diagram and Incident Steps
 Sally from Accounting sees an urgent email from her coworker (a similar, but fake email address!) that declares something is wrong with her device, requiring her to 1) Shut off Windows Defender and 2) Run a pre-configured script in her PowerShell terminal... 
 
 Unbeknownst to Sally, the payload she runs in her PowerShell terminal opens a reverse shell on the attackers' machine. SOC was notified of Defender being shut off but also the script being ran in PowerShell. 
@@ -504,7 +511,7 @@ The post-incident report will contain:
 1. Summary of the actions taken by SOC as incidence response.
 2. Mitigations for similar future attacks; enhance security posture.
 
-# Incident #2: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
+# Incident #2: Attack Story, TTPs, Kill Chain Diagram and Incident Steps
 An IEX exploit that results in a payload being downloaded and executed on a machine; installing an infostealer. Initial access done by phishing, asserting that a 0day security patch was supposed to be done by a fake IT/Help desk email by Scattered Spider (why not). Coworker deams it as a false positive but you investigate further and isolate the system from the network. You locate the infostealer program, which originally planned to exfil the data to a remote Discord server and delete it before it can do further damage.
 
 ## MITRE Layout:
@@ -534,7 +541,7 @@ The post-incident report will contain:
 1. Summary of the actions taken by SOC as incidence response.
 2. Mitigations for similar future attacks; enhance security posture.
 
-# Incident #3: Attack Story, TTPS, Kill Chain Diagram and Incident Steps
+# Incident #3: Attack Story, TTPs, Kill Chain Diagram and Incident Steps
 A NTLM brute force attack is attempted on a Domain Controller (DC) in an Active Directory environment. SOC notices an increase in failed login attempts and LDAP queries. Prior to the brute force, the attacker used both `PowerView` and `BloodHound` to perform domain enumeration to 1) Get inital domain information then 2) Perform domain enumeration while avoiding DCs to raise suspicion using `Invoke-BloodHound --ExcludeDCs`. The user had already had Local Admin access on a separate user machine and manages to reach the DC through other trust domains with stored credentials.
 
 ## MITRE Layout:
