@@ -21,15 +21,6 @@ Lastly, I do expect some amount of competence with a Linux terminal for this pro
 
 With that being said, if you would like to contribute to this repo, feel free to message me or make a PR to the repo!
 
-# SIEM Features
-<strong>Basic features</strong> should include:
-- Log ingestion and indexing
-- Log parsing/querying
-- Dashboards w/ quantitative and qualitative visuals
-- Alerts
-
-Other features like event correlation, root cause analysis, ML and whatnot are achieved in more advanced software like EDRs and XDRs, which we will not be making anytime.
-
 # What You Will Learn!
 By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
 - Understand the workings of a SIEM, from ingest to visuallizing the data.
@@ -434,23 +425,29 @@ If you do wish to shut down your server. You can do so with the following steps:
 1. `sudo systemctl stop filebeat.service`
 2. `sudo systemctl stop kibana.service`
 3. `sudo systemctl stop elasticsearch.service`
-4. `sudo systemctl stop elastic-agent`, this will stop the Elastic Agent from collecting log data on our host machine. We will deploy these agents to other machines soon!
+4. `sudo systemctl stop elastic-agent`
+
+**I have noticed that sometimes, the `stop` command will timeout and fail when attempting to stop the `elastic-agent` service. I am not sure why this occurs. If anyone does know, do let me know! To my knowledge, it has no impact on anything; nothing has broken *yet*.**
 
 # Creating Agent Policies To Collect Logs
-To be continued...
+Navigate to the `Fleet` menu and click `Agent Policies`. Recall that agent policies will define what logs we want our agents to collect. To my knowledge, the Elastic Agent(s) **work with Filbeat** to get log data specified. Both the Filebeat configurations and agent policies work in tandem for log ingestion.
 
-# Intermission: Setting up a Kali Linux VM w/ VirtualBox
-I intended to have this (a Kali VM) to be used for one of the incidents below. However, that won't be needed since we really only need a Windows VM/System and Linux VM/System. Ensure you have either OS and are comfortable with interacting with your host OS for the simulated incidents.
+Click `Create Agent Policy`. For the sake of demonstration, we will create a basic policy encompassing Windows Endpoints, since we will be using a Windows VM down the line for our mock incidents.
+![Policy configuration.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/policy-config.png)
 
-1. Go to [here](https://www.kali.org/get-kali/#kali-virtual-machines) to get a prebuilt kali vm.
-2. Unpack the download w/ `7z x downloadedacrhive.7z`. If needed, install `p7zip` on Ubuntu/Debian w/ `sudo apt install p7zip-full` which provides us with the extraction tooling. Run `sudo apt update` before installing. <strong>This will take a while.</strong>
-3. Go to VirtualBox and Click 'Add' and select the extracted Kali VirtualBox folder.
-4. Start the VM and input 'kali' as both your username and password.
+Once your policy is created, click on it and select `Add Integration`. This is where we get to finally have some fun tweaking how our agents will work! What we're interested in is the `Security` section, but feel free to scroll and check out all the options at your disposal. What we **really** want is the `Endpoint Security` integration. Click on it once you've found it.
 
-Congrats, you have a Kali Linux VM running! Run the following commands to update your packages:
-1. `sudo apt update`, to check for updates and updatable packages.
-2. `sudo apt upgrade`, upgrade packages found in the previous command.
-3. `sudo apt autoremove`, remove any unneeded dependencies for packages to clean up a lil.
+Click `Add Endpoint Security` and configure the integration as you please. Click `Save and continue` once your finished.
+![Integration configuration!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/integration-config.png)
+
+Once your configuration is saved, you'll get a popup to add Elastic Agents to your host machines. Click `Add Elastic Agent later`; we will handle this soon! Before we continue on, get to **this** menu and click on your `Endpoint Security` integration's name. 
+![This lovely thing.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/agent-policy-config.png)
+
+Scroll to the bottom and click `Show advanced settings`. Scroll until you find `windows.advanced.elasticsearch.tls.ca_crt`. This property will house the public CA certificate for elasticsearch on our endpoint(s). I have set the directory for this to be `C:\Windows\System32\ca.crt`; we'll handle getting the cert copied from our server VM to the Windows endpoint in a later step and will require us to tinker with our VM settings. For now, simply save and continue.
+
+Next, we will add the `Windows` integration. Yes, that's its name. Add it just as we did before. The integration itself will log all sorts of behaviour but particularly **Script Block Logging** through the `PowerShell Operational` event log channel, which will log any and all commands ran in PowerShell, provided we have it enabled on our endpoint(s); we'll worry about this when it matters.
+
+Click `Save and continue` then click `Add Elastic Agent later` once more. With all that said and done, we are done tweaking our Agents! Our next step is to install and set up a Windows VM.
 
 # Intermission: Setting up a Windows 10 VM w/ VirtualBox
 1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your language as needed and wait for the download to complete. If you get redirected to a different site because you're already running Windows, <strong>install the media creation tool and download an ISO image in the creation tool!</strong>
@@ -470,6 +467,9 @@ Otherwise, we can continue and make a Local Account with out desired credentials
 ![It's finally over...](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows-success.png)
 
 Additionally, once you load up Windows, <strong>you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat).</strong> This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
+
+# Configuring Our Windows (VM) Endpoint
+To be continued...
 
 # Intermission: Simulating Events in a Controlled Environment
 The following 2 sections will go over running simulated incidents and triaging them through our SIEM. These sections are highly recommended to go through but totally optional! However, they will prove a fine amount of competence with root-cause analysis, incident response, how to triage attacks and how to map an incident with both the Kill Chain framework and MITRE ATT&CK Entreprise matrix. Simply put, there is a lot of info to unpack, but it is well worth your time!
