@@ -27,11 +27,25 @@ By the end of this project, <strong>you are going to know a lot of stuff</strong
 - Understand how Elasticsearch, Beats and Kibana work together to create a SIEM.
 - Understand what a [CA](https://en.wikipedia.org/wiki/Certificate_authority) is, the signing process, and how SSL certificates function.
 - Establish simulated attacks in a controlled environment and employ root cause analysis.
-- Understand how Active Directory works at a very basic level with Domains, DCs, DAs, etc. by deploying GOAD-mini on a Windows VM.
+- Understand how Active Directory works at a very basic level with Domains, DCs, DAs, etc.
 - Understanding how Atomic Red Team tests can be used for defensive purposes to enhance security postures.
 - Understand [MITRE ATT&CK](https://attack.mitre.org/) and using it to show TTPs of an attack.
 - Understand the [Kill Chain framework](https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html); understand the attacker POV.
 - Understand incident response measures for triaging attacks.
+
+# Q&A
+Below is a list of some questions I have answered preemptively to save time for both me and **you**:
+
+> *How can I reach you?*
+**DM me on Discord (nubbbieeee)!**
+> *Why aren't you using an updated Ubuntu Server install? Why 18.04 LTS and not >=20.04?*
+**In all honesty, I was following the [LevelEffect](https://www.leveleffect.com/blog/how-to-set-up-your-own-home-lab-with-elk) from the beginning and have been using it as reference. It too used Ubuntu Server 18.04 LTS, so I followed suit. You can probably get away with installing a newer OS install and save a snapshot before doing so!**
+> *Why use this guide when others exist?*
+**The rest of them, if any exist, suck. Most 'ELK setup' guides use Elastic Cloud, which is totally fine, but hosting everything and going step-by-step just makes you that much more informed and knowledgable. On top of me providing DOCUMENTATION for you to read AS YOU WISH. I don't know of many guides that do that. And no, those Arduino project guides don't count because they all copy each other line for line, letter for letter.**
+> *Why is this so long?*
+**I go into a lot of detail + this is what real learning is. Taking the time to put in the effort to reap the fruits of your labour, as I have throughout writing this guide.**
+> *'xyz' isn't documented in your guide, why is that?*
+**Either I 1) Missed it completely while writing it or 2) Purposefully ignored it because it was either self-explanatory or way too lengthy to explain. In the event that I do miss something that you believe is important to be documented, you can DM me on Discord (nubbieeee).**
 
 # The Setup Begins
 This is our first step into our SIEM-building journey. 
@@ -550,14 +564,6 @@ The MITRE Layout segments parts of the attack and associates them with their res
 - Domain enumeration using `PowerView` and `BloodHound`. [T1106](https://attack.mitre.org/techniques/T1106/) and [T1599](https://attack.mitre.org/techniques/T1590).
 - Compromise domain via Local Admin user with guessed credentials to continue escalating privileges through domain trust. [T1584.001](https://attack.mitre.org/techniques/T1584/001), [T1078.002](https://attack.mitre.org/techniques/T1078/002/) and [T1482](https://attack.mitre.org/techniques/T1482).
 - Attempted brute force on Domain Controller server. [T110.001](https://attack.mitre.org/techniques/T1110/003/)
-
-
-## Pre-incident Setup
-- Specifically for this incident, we will show the # of failed logins on our domain for a given account on our Kibana dashboard; Steps TBD.
-- Make sure the Windows VM is updated and can run PowerShell.
-- Have GOAD-mini up and running. DC is already available.
-- Set up the brute force script in accordance to Atomic Red Team documentation; Steps TBD.
-- Ensure log data is being sent to Elastic server.
 
 ## Kill Chain Diagram, Made Using Excalidraw
 ![Kill Chain Diagram.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/killchains/BruteForceDCKillChain.png)
