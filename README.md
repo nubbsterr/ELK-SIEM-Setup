@@ -15,6 +15,8 @@ Big thanks to the following people as well:
 # Some Tips Before Diving In
 Please check out the <strong>[Sources section](#sources)</strong> of this guide for any important documentation as needed. Other bits of documentation are hyperlinked throughout the guide and are optional to read but highly recommended for your own understanding.
 
+Also, **please** consult the Q&A section below if you ever have questions as you go through the guide!
+
 Lastly, I do expect some amount of competence with a Linux terminal for this project. We will be using SSH, lots of `sudo` and command-line text editors; I expect you to be comfortable with common Linux commands like `cd`, `mkdir`, `systemctl`, etc. Naturally, I will guide you as much as I can, but if anything is confusing you, it can be: 
 1. Voiced to me. Yes, you can message me on Discord or via email with questions. 
 2. Googled and/or understood with AI. I won't shove it down your throat, but ChatGippity is marvelous for these roles of teaching the unknown. Of course, it is advised to do your own research and pay attention to the AI's responses for hallucination(s) so you don't fool yourself.
@@ -23,6 +25,7 @@ With that being said, if you would like to contribute to this repo, feel free to
 
 # What You Will Learn!
 By the end of this project, <strong>you are going to know a lot of stuff</strong>; you'll have basically done a fair portion of what a SOC analyst does in their like:
+- How to use VirtualBox to create VMs and configure networks and port forwarding
 - Understand the workings of a SIEM, from ingest to visuallizing the data.
 - Understand how Elasticsearch, Beats and Kibana work together to create a SIEM.
 - Understand what a [CA](https://en.wikipedia.org/wiki/Certificate_authority) is, the signing process, and how SSL certificates function.
@@ -38,19 +41,26 @@ Below is a list of some questions I have answered preemptively to save time for 
 
 > *How can I reach you?*
 **DM me on Discord (nubbbieeee)!**
+
+> *How do I stop all my services?*
+**They will stop on their own when you shutdown your VM, there is no need to stop them manually. if anything, it may lead to goofing things up.**
+
 > *Why aren't you using an updated Ubuntu Server install? Why 18.04 LTS and not >=20.04?*
 **In all honesty, I was following the [LevelEffect](https://www.leveleffect.com/blog/how-to-set-up-your-own-home-lab-with-elk) from the beginning and have been using it as reference. It too used Ubuntu Server 18.04 LTS, so I followed suit. You can probably get away with installing a newer OS install and save a snapshot before doing so!**
+
 > *Why use this guide when others exist?*
 **The rest of them, if any exist, suck. Most 'ELK setup' guides use Elastic Cloud, which is totally fine, but hosting everything and going step-by-step just makes you that much more informed and knowledgable. On top of me providing DOCUMENTATION for you to read AS YOU WISH. I don't know of many guides that do that. And no, those Arduino project guides don't count because they all copy each other line for line, letter for letter.**
+
 > *Why is this so long?*
 **I go into a lot of detail + this is what real learning is. Taking the time to put in the effort to reap the fruits of your labour, as I have throughout writing this guide.**
+
 > *'xyz' isn't documented in your guide, why is that?*
 **Either I 1) Missed it completely while writing it or 2) Purposefully ignored it because it was either self-explanatory or way too lengthy to explain. In the event that I do miss something that you believe is important to be documented, you can DM me on Discord (nubbieeee).**
 
 # The Setup Begins
 This is our first step into our SIEM-building journey. 
 
-First things first, we need a VM to host our services. We'll be using VirtualBox for just that. Because I am such a nice kiddo, <strong>I have a bash script made to install VirtualBox 7.1 for Ubuntu linked on this repo :)</strong> Sources are linked below specifically for this setup.
+First things first, we need a VM to host our services. We'll be using VirtualBox for just that. Because I am such a nice kiddo, <strong>I have a bash script made to install VirtualBox 7.1 for Ubuntu linked on this repo :)</strong> [Sources](#sources) are linked below specifically for this setup.
 
 Once VirtualBox is set up, we can install an ISO for our VM; preferably Linux. I am running an [Ubuntu Server VM](https://releases.ubuntu.com/bionic/). 
 
@@ -109,6 +119,8 @@ What this basically means is that whenever I send a TCP request to port 2222 on 
 
 Moment of truth, we should be able to `ssh` given any IP address and on port 2222. Run `ssh -p 2222 SERVER_USERNAME@127.0.0.1` and hope for the best!
 ![This took me like 20-30 minutes.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/ssh-success.png)
+
+Let it be known that this setup is **temporary!** We will configure more networking with our VMs as we go further into this guide!
 
 # Continuing to setup Elasticsearch
 <strong>The horrors persist but so do we, let's continue!</strong> If your VM is not running right now, go and start it up. We'll SSH in just like before and get straight to business.
@@ -200,11 +212,6 @@ Now if you're a complete dumby like me, and forgot to run `sudo filebeat setup`,
 ![IT WORKS!???????????????!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/filebeat-success.png)
 
 That yellow healthcheck notice is nothing to worry about. To my knowledge, it is indicating that replica shards are unassigned, which basically means we are at risk of data loss, which we don't care about in our current state. No only that, we have no primary shards, since we have no indexed data, so <strong>we do not care.</strong>
-
-With that being said, we're done here! To shut everything down, run:
-1. `sudo systemctl stop filebeat.service`, <strong>this took a while so, once again, do NOT Ctrl+C.</strong>
-2. `sudo systemctl stop kibana.service`
-3. `sudo systemctl stop elasticsearch.service`
 
 If you aren't leaving, then we'll get going to the next step; establishing a CA.
 
@@ -365,7 +372,7 @@ Open your Network settings as we did long ago to configure SSH's port forwaring.
 - Host IP: 127.0.0.1 
 - Host Port: 5601
 - Guest IP: `YOUR_KIBANA_IP`
-- Gust Port: 5601
+- Guest Port: 5601
 
 `YOUR_KIBANA_IP` is the IP you are hosting the Kibana server on, which is shown in both Kibana's log files and the `kibana.yml` configuration. Once you've created the rule, you can attempt to head to your frontend in your web browser at `https://127.0.0.1:5601` if your VM is powered on and your services are running.
 ![Waiting....](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/frontend-loading.png)
@@ -435,14 +442,6 @@ You will notice that we are able to upgrade our Fleet server, however I am not s
 
 Let's continue on now. Click the `Fleet Settings` button in the top right corner of the UI. Change the Elasticsearch host from `localhost` to your Elasticsearch host IP. Save and Apply our changes and we're good to go to our next step of Agent Policies.
 
-If you do wish to shut down your server. You can do so with the following steps:
-1. `sudo systemctl stop filebeat.service`
-2. `sudo systemctl stop kibana.service`
-3. `sudo systemctl stop elasticsearch.service`
-4. `sudo systemctl stop elastic-agent`
-
-**I have noticed that sometimes, the `stop` command will timeout and fail when attempting to stop the `elastic-agent` service. I am not sure why this occurs. If anyone does know, do let me know! To my knowledge, it has no impact on anything; nothing has broken *yet*.**
-
 # Creating Agent Policies To Collect Logs
 Navigate to the `Fleet` menu and click `Agent Policies`. Recall that agent policies will define what logs we want our agents to collect. To my knowledge, the Elastic Agent(s) **work with Filbeat** to get log data specified. Both the Filebeat configurations and agent policies work in tandem for log ingestion.
 
@@ -452,6 +451,7 @@ Click `Create Agent Policy`. For the sake of demonstration, we will create a bas
 Once your policy is created, click on it and select `Add Integration`. This is where we get to finally have some fun tweaking how our agents will work! What we're interested in is the `Security` section, but feel free to scroll and check out all the options at your disposal. What we **really** want is the `Endpoint Security` integration. Click on it once you've found it.
 
 Click `Add Endpoint Security` and configure the integration as you please. Click `Save and continue` once your finished.
+
 ![Integration configuration!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/integration-config.png)
 
 Once your configuration is saved, you'll get a popup to add Elastic Agents to your host machines. Click `Add Elastic Agent later`; we will handle this soon! Before we continue on, get to **this** menu and click on your `Endpoint Security` integration's name. 
@@ -466,7 +466,6 @@ Click `Save and continue` then click `Add Elastic Agent later` once more. With a
 # Intermission: Setting up a Windows 10 VM w/ VirtualBox
 1. Go get [a multi-edition Windows 10 ISO](https://www.microsoft.com/en-us/software-download/windows10ISO) here. Pick your language as needed and wait for the download to complete. If you get redirected to a different site because you're already running Windows, <strong>install the media creation tool and download an ISO image in the creation tool!</strong>
 2. Go to `Machine` --> `New` and select `Microsoft Windows` and `Windows 10 (64-bit)` as your Type and Version respectively. Select the previously installed Windows 10 ISO as your ISO image. Check the box to skip the 'Unattended Install' as well.
-![Windows VM Config](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/windows=vm-config.png)
 3. Set up your system resources as you wish. Refer to the original Ubuntu VM setup instructions as needed. I have my VM set to run 4GB of RAM and 2 vCPUs/Processors.
 4. Set storage for your Virtual Hard Disk; I have allocated 50GB of space.
 
@@ -483,6 +482,20 @@ Otherwise, we can continue and make a Local Account with out desired credentials
 Additionally, once you load up Windows, <strong>you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat).</strong> This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
 
 # Configuring Our Windows (VM) Endpoint
+Before we do ANYTHING, I must inform you that our current network setup will NOT allow our VMs to communicate! To do enable communication between our VMs we'll need to set up a NAT network.
+
+To do this, go to your VirtualBox window (not a VM). Select `File` --> `Tools` --> `Network Manager`. From here, select `NAT Networks` and click `Create`. That's all we gotta do! Now go back to our VMs, and select the NAT network we created under `Settings` --> `Attached To` --> `NAT Network` --> `Name` --> `NatNetwork`. We do this for both VMs, and we should be good to go! **Our port forwarding rules will be gone now though, so we'll need to set them up again in the `Tools --> Network Manager` menu.**
+![port forwarding AGAIN](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/portforwarding-NAT.png)
+
+Now that that's all done, start up your VMs and go to your Windows host. Open a PowerShell window as Administrator on your Windows VM and run the following commands:
+1. `Test-NetConnection -port 9200 <elasticsearch-IP>`
+2. `Test-NetConnection -port 8220 <fleet-IP>`
+
+This will confirm that we can connect via TCP from our Windows host to the ELK server for our required communications. 
+![test-net good!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/testnet-success.png)
+
+Marvelous. Let's continue!
+
 To be continued...
 
 # Intermission: Simulating Events in a Controlled Environment
