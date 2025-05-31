@@ -72,15 +72,17 @@ To set up the VM:
 5. Start up your VM once everything is ready!
 
 To set up the OS on our VM:
-1. Select your language accordingly. ![Select a Language](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/select-language.png)
+1. Select your language accordingly. 
+![Select a Language](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/select-language.png)
 2. If you get an "installer update" notice, you can skip it as you wish.
 3. <strong>Record the IP shown next to DHCPv4, we will need this!</strong>
 4. We don't need a proxy, so we can skip configuring one. We also don't need an alternative mirror for Ubuntu, so leave everything there as is.
-5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) ![Storage Conig](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
-6. Confirm your user credentials and SSH setup, tick the OpenSSH Server Box. We don't need any featured software on our VM, so continue with the installation. ![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
-7. Wait for the OS install to complete :) ![](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/waiting-for-install.png)
-
-Congrats! You're one step closer to a lovely homelab setup. Let's continue to our next step of our journey; installing and Configuring Elasticsearch.
+5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) 
+![Storage Conig](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
+6. Confirm your user credentials and SSH setup, tick the OpenSSH Server Box. We don't need any featured software on our VM, so continue with the installation. 
+![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
+7. Wait for the OS install to complete :) 
+![waiting](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/waiting-for-install.png)
 
 # Installing and Configuring Elasticsearch
 Before we even get to starting anything, go into your VirtualBox menu and select the 3 bars next to your VM, then select `Snapshots`. Click `Take` and name the snapshot however you like. Congratulations, you have just implemented a failsafe in case you break your VM somehow. <strong>I strongly recommend you regularly take snapshots of your VM when you reach checkpoints in this guide.</strong>
@@ -92,12 +94,9 @@ The last thing we need to do before getting to real SIEM setup fun is to update 
 ```
 sudo apt update && sudo apt upgrade -y
 sudo apt dist-upgrade -y
-sudo apt install zip unzip -y
-sudo apt install jq -y
+sudo apt install zip unzip jq -y
 ```
-If you're done for the day like me, you can shutdown your VM by going to `Machine` --> `ACPI Shutdown` and return later :) otherwise, run `sudo reboot` to continue.
-
-From here on out, we will be using SSH on our host machine instead of using VirtualBox.
+From here on out, I will be using SSH to access our server. However, it is totally fine to do everything on the VM manually.
 
 # Intermission: "SSH no worko!"
 If you're like me and SOMEHOW don't have ssh enabled by default, you can and should do the following:
@@ -130,13 +129,15 @@ Firstly, we will be installing `apt-transport-https`, which on its own enables A
 Run `sudo apt install apt-transport-https -y` and continue. Next we add the GPG key for Elasticsearch and its repo to our Ubuntu sources.
 
 Run `wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -` to add the GPG key and `echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list` to see the repo in our ubuntu sources. 
+
 ![GPG and repo added!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/gpg-repo-success.png)
 
-Success! Update our packages then install elasticsearch. Run `sudo apt update -y && sudo apt install elasticsearch -y`.
+We can now install the Elasticsearch service. Run `sudo apt install elasticsearch -y`.
 
-Now that Elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files.
+Now that Elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files. Run `sudo systemctl daemon-reload` to do so. 
 
 We will want to confirm that Elasticsearch is actually on our system, so run `sudo systemctl status elasticsearch.service`; we want to see a 'dead' process.
+
 ![Yes I did a typo.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-success.png)
 
 With that all said and done, we are officially finished the installation phase for Elasticsearch and will now get to configuring it.
@@ -144,10 +145,10 @@ With that all said and done, we are officially finished the installation phase f
 # Configuring Elasticsearch and Testing It Out
 This step is entirely for configuring Elasticsearch; telling it how to run, what ports it needs, communication, etc.
 
-Open `/etc/elasticsearch/elasticsearch.yml` in a text editor (neovim da goat). If you are using a terminal editor like me, run `sudo EDITOR_OF_CHOICE ELASTICSEARCH.YML PATH`. Firstly, we will edit the cluster.name property to be the name of your choice for your homelab. 
+Open `/etc/elasticsearch/elasticsearch.yml` in vim using `sudo vim /etc/elasticsearch/elasticsearch.yml`. You may use any editor of your choice. All I will say about Vim keybinds is that `ESC+Colon+q!` will forcefully exit and not save the file,`i` will enter insert mode where you can edit text, and `ESC` will take you out of any mode and put you into normal mode where you can traverse the file as you wish.  Firstly, we will edit the `cluster.name` property to be the name of your choice for your homelab. 
 ![Delete those pesky pound symbols.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/edit-elasticsearch-config.png)
 
-Continue editing the file. The `network.host` property will be our VM's IP address. The `http.port` property will be left alone, but make sure to uncomment it, and lastly, add the `discovery.type` property (this property tells Elasticsearch how it should form a cluster). <strong>Do not forget the colon next to the property name!</strong> 
+Continue editing the file. The `network.host` property will be our VM's IP address. The `http.port` property will be left alone, **but make sure to uncomment it**, and lastly, add the `discovery.type: single-node` property (this property tells Elasticsearch how it should form a cluster). **Do not forget the colon next to the property name!** 
 
 Once we are done, go ahead and close the YML file. Congrats, our config work here is done (temporarily)! We can now go ahead and start the `elasticsearch.service` service, then check the JSON output of Elasticsearch at our IP address + HTTP port--you'll see what I mean :)
 
@@ -156,14 +157,14 @@ Run `sudo systemctl start elasticsearch` and wait a lil for the command to compl
 
 Congratulations, we just set up Elasticsearch and can confirm that a cluster is up and running. Port 9200 is where we will send all of our logged data to; from Beats or Elastic Agents if you go down that route. Our next step is setting up Kibana in the same manner.
 
-If you ever want to edit the `elasticsearch.yml` configuration on your own time, <strong>you will need to run `sudo systemctl restart elasticsearch.service` so that the updated configuarion is read by Elasticsearch.</strong>
+If you ever want to edit the `elasticsearch.yml` configuration on your own time, **you will need to run `sudo systemctl restart elasticsearch.service` so that the updated configuarion is read by Elasticsearch.**
 
 # Configuring Kibana
 Configuring Kibana starts with installing it; run `sudo apt install kibana -y`.
 
 Next we will update the YML configuration of Kibana just like we did with Elasticsearch. In my case of running Vim as my editor, run `sudo vim /etc/kibana/kibana.yml`.
 
-We will leave the `server.port` property alone as port 5601 is the default option and we have no need to edit it. We will edit the `server.host` and `server.name` properties to be our IP address and an appropriate name respectively. One thing you may notice is that you can adjust the credentials for accessing the Kibana server. You can leave them blank for now, as we will change them later on.
+Uncomment the `server.port` property as port 5601 is the default option and we have no need to edit it. We will edit the `server.host` and `server.name` properties to be our IP address and an appropriate name respectively. One thing you may notice is that you can adjust the credentials for accessing the Kibana server. You can leave them blank for now, as we will change them later on.
 ![Our edits.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/kibana-config.png)
 ![Default credentials are a big nono!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/kibana-nono-security.png)
 
@@ -176,19 +177,13 @@ Once both Elasticsearch and Kibana are running, we will go ahead and check the s
 
 That "legacy OpenSSL" message thing is not an issue. According to ChatGPT (yes you heard that right), this is simply for backwards compatibility measures involving communication with Kibana's Node.js runtime. Basically, we do not care in the slightest. 
 
-Kibana and Elasticsearch are now up and running and all that's left is Beats for ingestion. To quickly go over Beats, we will actually be using <strong>filebeat</strong>, which is a kind of Beat offered by Beats (wowza). [Here is a link for further reading on other beats you can use.](https://www.objectrocket.com/resource/what-are-elasticsearch-beats/) For our purposes, filebeat will be just fine to get going and testing our environment. However, I will personally guide you through installing <strong>Winlogbeat</strong> to create our very own mock attack inspired by <strong>chroma</strong> on crin's server; Sally running PowerShell.
-
-If you're closing down like me for the night, you can run `sudo systemctl stop kibana` and `sudo systemctl stop elasticsearch` <strong>in that order</strong> to safely close down our active services :)
+Kibana and Elasticsearch are now up and running and all that's left is Beats for ingestion. To quickly go over Beats, we will actually be using **filebeat**, which is a kind of Beat offered by Beats (wowza). [Here is a link for further reading on other beats you can use.](https://www.objectrocket.com/resource/what-are-elasticsearch-beats/) For our purposes, filebeat will be just fine to get going and testing our environment. However, I will personally guide you through installing **Winlogbeat** to create our very own mock incidents inspired by **chroma** on crin's server.
 
 # Configuring Filebeat
 Install filebeat by running `sudo apt install filebeat -y`. As seen withboth Kibana and Elasticsearch, we will need to edit filebeat's YML file; `/etc/filebeat/filebeat.yml`, which I will go ahead and open with vim as I have been doing thus far.
 
-Here's where things get interesting for us. We can add a TON of different inputs for filebeat, ranging from `journald` logs to yes, `winlog input`. We can actually get Windows event logs using filebeat. Simply put, `Winlogbeat` captures far more log data with Windows operations past just logged events. Event logs are available from `winlog input` but also `Winlogbeat`. For simplicity sake, we will use filebeat instead of Winlogbeat for our mock attack, and you will see why once I get to describing the attack :)
+Configure the Elasticsearch portion of Filebeat. Kibana's config is totally fine. All we need to do is change the IP of the Elasticsearch host.
 
-Therefore, we will make the following edits:
-1. Add a new configuration to the `filebeat.inputs` field. This `winglog` input will require Script Block Logging on our Windows machine to work effectively, but we will configure that soon enough. The event IDs 4104 (script logging), 4105 (powershell cmd executed) and 4106 (powershell cmd complete) are all going to be very nice to have assuming an attack via PowerShell! <strong>This only works for PowerShell 5.1. If PowerShell is any greater version we need to change the `name` property to `PowerShellCore/operational` in accordance to MS Documentation.</strong>
-![Winlog input to add alongside base inputs.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/winlog-config.png)
-2. Configure the Elasticsearch portion of Filebeat. Kibana's config is totally fine. All we need to do is change the IP of the Elasticsearch host.
 ![Elasticsearch-Filebeat configuration.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-filebeat-config.png)
 
 That is all we need to do. Our next step is to literally set up Filebeat in the terminal. This will manage how index management w/ Elasticsearch works, on top of disabling Logstash for log ingest.
@@ -212,8 +207,6 @@ Now if you're a complete dumby like me, and forgot to run `sudo filebeat setup`,
 ![IT WORKS!???????????????!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/filebeat-success.png)
 
 That yellow healthcheck notice is nothing to worry about. To my knowledge, it is indicating that replica shards are unassigned, which basically means we are at risk of data loss, which we don't care about in our current state. No only that, we have no primary shards, since we have no indexed data, so <strong>we do not care.</strong>
-
-If you aren't leaving, then we'll get going to the next step; establishing a CA.
 
 # Establishing Elastic Services IPs and Understanding Certificate Authorities
 Our first step with making a CA is to understand why we are doing it. We are making a CA so we can implement [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security), thus HTTPS into our Elastic services, and that requires certificates.
