@@ -37,26 +37,26 @@ By the end of this project, <strong>you are going to know a lot of stuff</strong
 - Understand incident response measures for triaging attacks.
 
 # Q&A
-> [!IMPORTANT] Q&A Section
+> [!IMPORTANT]
 > Below is a list of some questions I have answered preemptively to save time for both me and **you**:
 
-> [!TIP] How can I reach you?
-> DM me on Discord (nubbbieeee)!
+> [!TIP]
+> Q: *How can I reach you?* A: DM me on Discord (nubbbieeee)!
 
-> [!TIP] How do I stop all my services?
-> **They will stop on their own when you shutdown your VM,** there is no need to stop them manually. if anything, it may lead to goofing things up.
+> [!TIP] 
+> Q: *How do I stop all my services?* A: **They will stop on their own when you shutdown your VM,** there is no need to stop them manually. if anything, it may lead to goofing things up.
 
-> [!TIP] Why aren't you using an updated Ubuntu Server install? Why 18.04 LTS and not >=20.04?
-> In all honesty, I was following the [LevelEffect](https://www.leveleffect.com/blog/how-to-set-up-your-own-home-lab-with-elk) from the beginning and have been using it as reference. It too used Ubuntu Server 18.04 LTS, so I followed suit. You can probably get away with installing a newer OS install and save a snapshot before doing so!
+> [!TIP] 
+> Q: *Why aren't you using an updated Ubuntu Server version?* A: In all honesty, I was following the [LevelEffect](https://www.leveleffect.com/blog/how-to-set-up-your-own-home-lab-with-elk) from the beginning and have been using it as reference. It too used Ubuntu Server 18.04 LTS, so I followed suit. You can probably get away with installing a newer OS install and save a snapshot before doing so!
 
-> [!TIP] Why use this guide when others exist?
-> The rest of them, if any exist, **suck**. Most 'ELK setup' guides use Elastic Cloud, which is totally fine, but hosting everything and going step-by-step just makes you that much more informed and knowledgable. On top of me providing DOCUMENTATION for you to read AS YOU WISH. I don't know of many guides that do that. And no, those Arduino project guides don't count because they all copy each other line for line, letter for letter.
+> [!TIP] 
+> Q: *Why use this guide when others exist?* A: The rest of them, if any exist, **suck**. Most 'ELK setup' guides use Elastic Cloud, which is totally fine, but hosting everything and going step-by-step just makes you that much more informed and knowledgable. On top of me providing DOCUMENTATION for you to read AS YOU WISH. I don't know of many guides that do that. And no, those Arduino project guides don't count because they all copy each other line for line, letter for letter.
 
-> [!TIP] Why is this so long?*
-> **I go into a lot of detail + this is what real learning is.** Taking the time to put in the effort to reap the fruits of your labour, as I have throughout writing this guide.
+> [!TIP]
+> Q: *Why is this so long!!!!!?????*  A: **I go into a lot of detail + this is what real learning is.** Taking the time to put in the effort to reap the fruits of your labour, as I have throughout writing this guide.
 
-> [!TIP] 'xyz' isn't documented in your guide, why is that?
-> Either I 1) Missed it completely while writing it or 2) Purposefully ignored it because it was either self-explanatory or way too lengthy to explain. In the event that I do miss something that you believe is important to be documented, you can DM me on Discord (nubbieeee).
+> [!TIP]
+> Q: *`xyz` isn't documented in your guide! Why is that?* A: Either I 1) Missed it completely while writing it or 2) Purposefully ignored it because it was either self-explanatory or way too lengthy to explain. In the event that I do miss something that you believe is important to be documented, you can DM me on Discord (nubbieeee).
 
 # The Setup Begins
 This is our first step into our SIEM-building journey. 
