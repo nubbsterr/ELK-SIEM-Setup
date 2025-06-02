@@ -7,10 +7,9 @@ A guide for building your own SIEM using the Elasticsearch, Beats, and Kibana, a
 This guide is aimed to be very step-by-step oriented; my goal is to guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. 
 
 Big thanks to the following people as well:
-- `UncleFrikus` for also helping me both test my guide but also troubleshoot issues along the way :)
-- `Lavender 💜` for a lot of red team knowledge behind the scenes regarding C2s and maldev.
-- `Chroma` for also assisting me in red team but more so in blue team with understanding SOC; you helped me lots with this project with constructing the incidents.
-- `Eurofighter` for loads of red team knowledge, mainly having to do with maldev. You are the reason why I got into researching red team!!
+- Lavender 💜 for a lot of red team knowledge behind the scenes regarding C2s and maldev.
+- Chroma for also assisting me in red team but more so in blue team with understanding SOC; you helped me lots with this project with constructing the incidents.
+- Eurofighter for loads of red team knowledge, mainly having to do with maldev. You are the reason why I got into researching red team!!
 
 # Some Tips Before Diving In
 Please check out the <strong>[Sources section](#sources)</strong> of this guide for any important documentation as needed. Other bits of documentation are hyperlinked throughout the guide and are optional to read but highly recommended for your own understanding.
@@ -70,14 +69,19 @@ To set up the VM:
 2. Give your VM a cool name and select the previously installed ISO image as your chosen OS.
 3. Check the box to skip the unattented install. This is so we can tinker everything ourselves.
 4. Adjust virtual hardware settings. I have my VM running 4GB of RAM, 2 CPU cores and ~50GB of SSD storage.
-5. Start up your VM once everything is ready!
+5. Click Finish and complete your VM setup.
+
+> [!IMPORTANT] 
+> Before starting our VM, we will connect it to a NAT network in preparation to join other machines to the network so we can deploy Agents to them. In VirtualBox, hit `File` --> `Tools` --> `Network Manager`. Click `NAT Networks` and hit `Create`. Afterwards, go to `Settings` on our newly made server VM. Go to `Network` --> `Attached To` --> `NAT Network`. Our newly made network should be immediately selected! From here, we can continue on!
+
+6. Start up your VM once everything is ready!
 
 To set up the OS on our VM:
 1. Select your language accordingly. ![Select a Language](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/select-language.png)
 2. If you get an "installer update" notice, you can skip it as you wish.
 3. <strong>Record the IP shown next to DHCPv4, we will need this!</strong>
 4. We don't need a proxy, so we can skip configuring one. We also don't need an alternative mirror for Ubuntu, so leave everything there as is.
-5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) ![Storage Conig](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
+5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) ![Storage Config](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
 6. Confirm your user credentials and SSH setup, tick the OpenSSH Server Box. We don't need any featured software on our VM, so continue with the installation. ![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
 7. Wait for the OS install to complete :) ![waiting](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/waiting-for-install.png)
 
@@ -102,21 +106,20 @@ If you're like me and SOMEHOW don't have ssh enabled by default, you can and sho
 3. Run the following command: `sudo apt-get remove --purge openssh-server&& sudo apt-get update && sudo apt-get install openssh-server`.
 4. If all is well, you can run `sudo systemctl status ssh` and see that SSH is currently a dead process. Run `sudo systemctl start ssh` to start it up! You can also run `sudo systemctl enable ssh` to just have it be a startup process.
 
-Because I am such a nice guy, I have left a script on this repo that can do all of this for you :) 
+Because I am such a nice guy, I have left a script on this repo that can do all of this for you provided you are on an Ubuntu/Debian system! 
 
 # Intermission: More SSH Setup
-Fun fact, we can't just SSH and magically run on our VM. No, that'd be too easy. We actually have to do <strong>port forwarding</strong> to achieve this. Simply put, we make an SSH request on a certain port, which then gets sent to our VM at port 22; the port for SSH connections.
+This step is optional for setting up SSH. If we want to SSH onto our VM, we'll require a port forwarding rule such that TCP traffic from the host machine is directed to the VM at port 22 (SSH port).
 
-To achieve this, I created this rule by going to the `Settings` tab in VirtualBox and going to `Network` then `Port Forwarding`. ![Networking Page](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/network-settings.png).
+Go to `File` --> `Tools` --> `Network Manager` --> `NAT Networks` --> `Port Forwarding`. Click the small green button and add the following properties to the rule:
+Name: [Whatever name you want]
+Protocol: TCP
+Host IP: 127.0.01
+Host Port: [any port to specify with SSH]
+Guest IP: [Your server's IP, check with `ip addr`]
+Guest Port: 22
 
-From here, I make the following Port Forwarding rule:
-![Port forwarding in VirtualBox.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/forwarding-rule.png)
-What this basically means is that whenever I send a TCP request to port 2222 on my machine, regardless of the IP used to specify the host, it will be forwarded to port 22 on the Guest IP, which is our DHCP IP address from before. <strong>You can (and should) change the Host IP value to something that isn't blank since that will allow any machine to access the VM effectively. You can specify 127.0.0.1 for the Host IP to only allow localhost/your machine to access the VM.</strong>
-
-Moment of truth, we should be able to `ssh` given any IP address and on port 2222. Run `ssh -p 2222 SERVER_USERNAME@127.0.0.1` and hope for the best!
-![This took me like 20-30 minutes.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/ssh-success.png)
-
-Let it be known that this setup is **temporary!** We will configure more networking with our VMs as we go further into this guide!
+With this rule, we can SSH from our host machine onto the VM using `ssh -p [IP set for host port] [server username]@[server hostname]`. 
 
 # Continuing to setup Elasticsearch
 <strong>The horrors persist but so do we, let's continue!</strong> If your VM is not running right now, go and start it up. We'll SSH in just like before and get straight to business.
@@ -129,7 +132,7 @@ Run `wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-ke
 
 ![GPG and repo added!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/gpg-repo-success.png)
 
-We can now install the Elasticsearch service. Run `sudo apt install elasticsearch -y`.
+We can now install the Elasticsearch service. Run `sudo apt install elasticsearch`.
 
 Now that Elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files. Run `sudo systemctl daemon-reload` to do so. 
 
@@ -157,7 +160,7 @@ Congratulations, we just set up Elasticsearch and can confirm that a cluster is 
 If you ever want to edit the `elasticsearch.yml` configuration on your own time, **you will need to run `sudo systemctl restart elasticsearch.service` so that the updated configuarion is read by Elasticsearch.**
 
 # Configuring Kibana
-Configuring Kibana starts with installing it; run `sudo apt install kibana -y`.
+Configuring Kibana starts with installing it; run `sudo apt install kibana`.
 
 Next we will update the YML configuration of Kibana just like we did with Elasticsearch. In my case of running Vim as my editor, run `sudo vim /etc/kibana/kibana.yml`.
 
@@ -177,7 +180,7 @@ That "legacy OpenSSL" message thing is not an issue. According to ChatGPT (yes y
 Kibana and Elasticsearch are now up and running and all that's left is Beats for ingestion. To quickly go over Beats, we will actually be using **filebeat**, which is a kind of Beat offered by Beats (wowza). [Here is a link for further reading on other beats you can use.](https://www.objectrocket.com/resource/what-are-elasticsearch-beats/) For our purposes, filebeat will be just fine to get going and testing our environment. However, I will personally guide you through installing **Winlogbeat** to create our very own mock incidents inspired by **chroma** on crin's server.
 
 # Configuring Filebeat
-Install filebeat by running `sudo apt install filebeat -y`. As seen withboth Kibana and Elasticsearch, we will need to edit filebeat's YML file; `/etc/filebeat/filebeat.yml`, which I will go ahead and open with vim as I have been doing thus far.
+Install filebeat by running `sudo apt install filebeat`. As seen withboth Kibana and Elasticsearch, we will need to edit filebeat's YML file; `/etc/filebeat/filebeat.yml`, which I will go ahead and open with vim as I have been doing thus far.
 
 Configure the Elasticsearch portion of Filebeat. Kibana's config is totally fine. All we need to do is change the IP of the Elasticsearch host.
 
@@ -219,7 +222,9 @@ Replace the `10.0.2.15` with your appropriate host IP. You may be wondering what
 Save the file and exit our text editor. Our next step is to literally create a PKI (Public Key Infrastructure) for ourselves. To do so, we will need keys and certificates, and of course, a certificate authority, which we will make using Elasticsearch's utilities.
 
 # Creating the CA and Generating Certificates
-Navigate to `/usr/share/elasticsearch` and run the following: `bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 1) Create a new CA and 2) Create the CA certificate and private key in PEM format, as the command output will say. <strong>Leave the option for the output file blank; simply click Enter and continue.</strong>
+Navigate to `/usr/share/elasticsearch` and run the following: `bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 
+1) Create a new CA
+2) Create the CA certificate and private key in PEM format, as the command output will say. 
 ![Running the command and seeing the output!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-certutil-success.png)
 
 Awesome sauce. We now have a zip file of our our CA certificate and private key. Unzip the zip folder with `sudo unzip ./elastic-stack-ca.zip`. You should have a `ca/` directory with a certificate file and private key. Our next step is to generate the certificate to sign for each of our instances.
@@ -231,7 +236,8 @@ Generate the certificate with the following command: `sudo bin/elasticsearch-cer
 4. Output the final compressed zip with the name `certs.zip`.
 ![Creating our certificates for each instance.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/creating-instances-certificates.png)
 
-The command output on its own does a great job giving a ton of documentation, which is awesome. We'll unzip the zip folder and then make a new directory `certs` solely to organize our goodies. Run `sudo unzip certs.zip` then `sudo mkdir certs`. We'll move all of our cert files into this directory with the following commands:
+The command output on its own does a great job giving a ton of documentation, which is awesome. We'll unzip the zip folder and then make a new directory `certs` solely to organize our goodies. Run `sudo unzip certs.zip` then `sudo mkdir certs`. We'll be organizing:
+
 1. `sudo mv elasticsearch/* certs/`
 2. `sudo mv kibana/* certs/`
 3. `sudo mv fleet/* certs/`
@@ -246,7 +252,7 @@ Then we copy the private key and CA certificate to said directories:
 2. `sudo cp ca/ca.* /etc/kibana/certs/ca`
 3. `sudo cp ca/ca.* /etc/fleet/certs/ca`
 
-And finally, copy the service sertificates and keys we generated in the beginning to each of their `certs` directory:
+And finally, copy the service certificates and keys we generated in the beginning to each of their `certs` directory:
 1. `sudo cp certs/elasticsearch.* /etc/elasticsearch/certs`
 2. `sudo cp certs/kibana.* /etc/kibana/certs`
 3. `sudo cp certs/fleet.* /etc/fleet/certs`
@@ -348,16 +354,14 @@ Save and exit our YML config file and restart Kibana so that our new configurati
 # Logging into Elastic
 Firstly, start up all of our services if you haven't already with `sudo systemctl start elasticsearch`, `sudo systemctl start kibana` and `sudo systemctl start filebeat`. The fun part starts now.
 
-Secondly, we can't actually access our frontend just yet. We actually need to create a port forwarding rule, Fun fact, `10.0.2.15:5601` is hosted on the SERVER, but not publicly accessible to US. We need to redirect, or otherwise, <strong>forward</strong>, the traffic to us so we can recieve it.
-
-Open your Network settings as we did long ago to configure SSH's port forwaring. Create a new rule with the little 'Plus' icon on the right with the following specifications:
+At the moment, we will not be able to access our frontend on a web browser without another port forwarding rule. As we did before when setting up SSH, go create another port forwarding rule, with the following parameters: 
 - Protocol: TCP
 - Host IP: 127.0.0.1 
 - Host Port: 5601
-- Guest IP: `YOUR_KIBANA_IP`
+- Guest IP: [kibana IP, which should be your server IP]
 - Guest Port: 5601
 
-`YOUR_KIBANA_IP` is the IP you are hosting the Kibana server on, which is shown in both Kibana's log files and the `kibana.yml` configuration. **Once you've created the rule, you can attempt to head to your frontend in your web browser at `https://127.0.0.1:5601`** if your VM is powered on and your services are running.
+**Once you've created the rule, you can attempt to head to your frontend in your web browser at `https://127.0.0.1:5601`** if your VM is powered on and your services are running.
 ![Waiting....](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/frontend-loading.png)
 
 The loading may take a while; just be patient...
@@ -463,14 +467,11 @@ Otherwise, we can continue and make a Local Account with out desired credentials
 Additionally, once you load up Windows, <strong>you can debloat it using [the instructions in this lovely GitHub repo](https://github.com/Raphire/Win11Debloat).</strong> This will improve Windows' performance by removing random apps and disabling telemetry. The README will guide you through everything, as it did for me! Once you're done there, you should check for updates in Settings and install any and all security patches and whatnot.
 
 # Configuring Our Windows (VM) Endpoint
-Before we do ANYTHING, I must inform you that our current network setup will NOT allow our VMs to communicate! To do enable communication between our VMs we'll need to set up a NAT network.
-
-To do this, go to your VirtualBox window (not a VM). Select `File` --> `Tools` --> `Network Manager`. From here, select `NAT Networks` and click `Create`. That's all we gotta do! Now go back to our VMs, and select the NAT network we created under `Settings` --> `Attached To` --> `NAT Network` --> `Name` --> `NatNetwork`. We do this for both VMs, and we should be good to go! **Our port forwarding rules will be gone now though, so we'll need to set them up again in the `Tools --> Network Manager` menu.**
-![port forwarding AGAIN](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/portforwarding-NAT.png)
+Add our Windows VM to our NAT Network as we did in the beginning with our server VM; go to `Settings` --> `Network` --> `Attached To`, and select `NAT Network`. Now, the two VMs will be able to communicate with each other!
 
 Now that that's all done, start up your VMs and go to your Windows host. Open a PowerShell window as Administrator on your Windows VM and run the following commands:
-1. `Test-NetConnection -port 9200 <elasticsearch-IP>`
-2. `Test-NetConnection -port 8220 <fleet-IP>`
+1. `Test-NetConnection -port 9200 [elasticsearch IP, which should be your server IP]`
+2. `Test-NetConnection -port 8220 [fleet IP, which should be your server IP]`
 
 This will confirm that we can connect via TCP from our Windows host to the ELK server for our required communications. 
 ![test-net good!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/testnet-success.png)
