@@ -73,17 +73,13 @@ To set up the VM:
 5. Start up your VM once everything is ready!
 
 To set up the OS on our VM:
-1. Select your language accordingly. 
-![Select a Language](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/select-language.png)
+1. Select your language accordingly. ![Select a Language](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/select-language.png)
 2. If you get an "installer update" notice, you can skip it as you wish.
 3. <strong>Record the IP shown next to DHCPv4, we will need this!</strong>
 4. We don't need a proxy, so we can skip configuring one. We also don't need an alternative mirror for Ubuntu, so leave everything there as is.
-5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) 
-![Storage Conig](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
-6. Confirm your user credentials and SSH setup, tick the OpenSSH Server Box. We don't need any featured software on our VM, so continue with the installation. 
-![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
-7. Wait for the OS install to complete :) 
-![waiting](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/waiting-for-install.png)
+5. Continue setting up the storage config for the OS, there is no need to tinker with anything unless <strong>you</strong> want to :) ![Storage Conig](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/storage-config.png)
+6. Confirm your user credentials and SSH setup, tick the OpenSSH Server Box. We don't need any featured software on our VM, so continue with the installation. ![Inputting user credentials, you can change yours to your liking!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/profile-setup.png)
+7. Wait for the OS install to complete :) ![waiting](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/waiting-for-install.png)
 
 # Installing and Configuring Elasticsearch
 Before we even get to starting anything, go into your VirtualBox menu and select the 3 bars next to your VM, then select `Snapshots`. Click `Take` and name the snapshot however you like. Congratulations, you have just implemented a failsafe in case you break your VM somehow. <strong>I strongly recommend you regularly take snapshots of your VM when you reach checkpoints in this guide.</strong>
@@ -223,52 +219,48 @@ Replace the `10.0.2.15` with your appropriate host IP. You may be wondering what
 Save the file and exit our text editor. Our next step is to literally create a PKI (Public Key Infrastructure) for ourselves. To do so, we will need keys and certificates, and of course, a certificate authority, which we will make using Elasticsearch's utilities.
 
 # Creating the CA and Generating Certificates
-Navigate to `/usr/share/elasticsearch` and run the following: `sudo /usr/share/elasticsearch/bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 1) Create a new CA and 2) Create the CA certificate and private key in PEM format, as the command output will say. <strong>Leave the option for the output file blank; simply click Enter and continue.</strong>
+Navigate to `/usr/share/elasticsearch` and run the following: `bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 1) Create a new CA and 2) Create the CA certificate and private key in PEM format, as the command output will say. <strong>Leave the option for the output file blank; simply click Enter and continue.</strong>
 ![Running the command and seeing the output!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-certutil-success.png)
 
 Awesome sauce. We now have a zip file of our our CA certificate and private key. Unzip the zip folder with `sudo unzip ./elastic-stack-ca.zip`. You should have a `ca/` directory with a certificate file and private key. Our next step is to generate the certificate to sign for each of our instances.
 
-Generate the certificate with the following command: `sudo /usr/share/elasticsearch/bin/elasticsearch-certutil cert --ca-cert ca/ca.crt --ca-key ca/ca.key --pem --in instances.yml --out cert.zip`. Let me make this shrimple to understand:
-1. We use the certutil and assign the CA certificate and private key from our unzipped files.
+Generate the certificate with the following command: `sudo bin/elasticsearch-certutil cert --ca-cert ca/ca.crt --ca-key ca/ca.key --pem --in instances.yml --out certs.zip`. Let me make this shrimple to understand:
+1. Provide the CA key and certificate to be included in each certificate and key respectively (shared secrets and for signing the certificates).
 2. Everything is set to the PEM format, given the `--pem` option.
-3. `--in instances.yml` is going to effectively use each instance specified in `instances.yml` and generate its certificate, private key and the CA certificate.
+3. `--in instances.yml` is going to effectively use each instance specified in `instances.yml` and generate its certificate and private key.
 4. Output the final compressed zip with the name `certs.zip`.
 ![Creating our certificates for each instance.](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/creating-instances-certificates.png)
 
 The command output on its own does a great job giving a ton of documentation, which is awesome. We'll unzip the zip folder and then make a new directory `certs` solely to organize our goodies. Run `sudo unzip certs.zip` then `sudo mkdir certs`. We'll move all of our cert files into this directory with the following commands:
-1. `sudo mv /usr/share/elasticsearch/elasticsearch/* certs/`
-2. `sudo mv /usr/share/elasticsearch/kibana/* certs/`
-3. `sudo mv /usr/share/elasticsearch/fleet/ * certs/`
+1. `sudo mv elasticsearch/* certs/`
+2. `sudo mv kibana/* certs/`
+3. `sudo mv fleet/* certs/`
 
 Next, we will create directories to store the CA certificate and private key for each of our services:
 1. `sudo mkdir -p /etc/elasticsearch/certs/ca`
 2. `sudo mkdir -p /etc/kibana/certs/ca`
 3. `sudo mkdir -p /etc/fleet/certs/ca`
 
-Then we copy the private key and CA certificate:
+Then we copy the private key and CA certificate to said directories:
 1. `sudo cp ca/ca.* /etc/elasticsearch/certs/ca`
 2. `sudo cp ca/ca.* /etc/kibana/certs/ca`
 3. `sudo cp ca/ca.* /etc/fleet/certs/ca`
 
-And finally, copy the service sertificates and keys we generated in the beginning to each `certs` directory:
-1. `sudo cp certs/elasticsearch.* /etc/elasticsearch/certs/`
-2. `sudo cp certs/kibana.* /etc/kibana/certs/`
-3. `sudo cp certs/fleet.* /etc/fleet/certs/`
+And finally, copy the service sertificates and keys we generated in the beginning to each of their `certs` directory:
+1. `sudo cp certs/elasticsearch.* /etc/elasticsearch/certs`
+2. `sudo cp certs/kibana.* /etc/kibana/certs`
+3. `sudo cp certs/fleet.* /etc/fleet/certs`
 
 Last thing to do before moving on is to clean up our now empty directories as we have moved their contents to the above new folders: `sudo rm -r elasticsearch/ kibana/ fleet/`. 
 
 # Intermission: Proper Security for SIEM Deployment
-Fun fact, we are using `sudo` a fair bit to access stuff on our system given escalated privileges through authentication. Simply put, we input out password to edit most of our configs, since this is low level stuff yes? 
-
-What if we hate using `sudo` and just want to edit everything? Well, we just use the root account all the time, then we don't need to worry about authenticating! <strong>No, no, no, no!!!!</strong> Bad! We want to employ least privilege on everything. As someone studying cybersecurity and even speaking with current analysts, systems are VERY susceptible to attacks; friggin' [PrintNightmare](https://nvd.nist.gov/vuln/detail/cve-2021-34527) everywhere. 
-
-What we are going to do is just that; employ least privilege on our systems to each of our services to both 1) Enhance our security posture and 2) <strong>Practice the task of assigning least privilege.</strong>
+This step is all about applying least privilege to our Elasticsearch certificates and keys as a layer of security in our deployment.
 
 We'll begin by navigating to `/usr/share` and run the following commands:
 1. `sudo chown -R elasticsearch:elasticsearch elasticsearch/`, which will 1) Recursively set the ownership of the `elasticsearch` directory to Elasticsearch and 2) Change its group to the `elasticsearch` group, which will further allow us to limit the scope of Elasticsearch's permissions.
 2. `sudo chown -R elasticsearch:elasticsearch /etc/elasticsearch/certs/ca`. Same stuff as above but now for Elasticsearch's CA copies, so it can access that directory as well.
 
-<strong>Now I cannot make myself any clear that you must NOT do this `chown` privilege restriction to Kibana FOR ANY REASON. Kibana needs access to its CA files to serve the SIEM frontend in your web browser.</strong>
+**Please do  NOT do this `chown` privilege restriction to Kibana's directories FOR ANY REASON. Kibana needs access to its CA files to serve the SIEM frontend in your web browser. By restricting access, Elasticsearch will not be able to retrieve such files and our deployment will be broken.**
 
 Now, to ensure our posture is correct and our certificates are valid, we will use the `openssl` command to print certificate information to the console with the following command: `sudo openssl x509 -in /etc/elasticsearch/certs/elasticsearch.crt -text -noout`, which will: 
 1. Print information for X509 certificates.
@@ -280,7 +272,7 @@ Now, to ensure our posture is correct and our certificates are valid, we will us
 # Configuring The Services To Run HTTTPS w/ SSL Certificates
 Now we are effectively ready to put everything together, and enable SSL on all of our services, thereby enabling HTTPS. 
 
-Our first step is to go configure the `kibana.yml` configuration file in `/etc/kibana/` using a text editor, where we will copy the following massive text wall and paste it to the <strong>bottom</strong> of our YML file:
+Our first step is to go configure the `kibana.yml` configuration file in `/etc/kibana/` by running `sudo vim /etc/kibana/kibana.yml`, or with your preferred text editor, where we will copy the following massive text wall and paste it to the <strong>bottom</strong> of our YML file, or edit the values in the YML file accordingly:
 
 ```
 server.ssl.enabled: true
@@ -296,14 +288,15 @@ server.publicBaseUrl: "https://10.0.2.15:5601"
 
 xpack.security.enabled: true
 xpack.security.session.idleTimeout: "30m"
-xpack.encryptedSavedObjects.encryptionKey: "min-32-byte-long-strong-encryption-key"
+xpack.encryptedSavedObjects:
+    encryptionKey: "min-32-byte-long-strong-encryption-key"
 ```
 
-Fun fact, these are all properties inside of our YML file, but they are commented out, and addressing you to edit each and every property would be a pain. Some of these are very self explanatory and others are not the case. The `server.publicBaseUrl` property is our IP and Kibana port number (5601), which specifies where Kibana is available; basically our SIEM UI. The `xpack` bits are all for securing Elasticsearch. The `xpack.encryptedSavedObjects.encryptionKey` property is for creating an encryption key to encrypt and decrypt sensitive Kibana entities like dashboards, alerts, etc. We use the default specified by [Elastic](https://www.elastic.co/guide/en/kibana/current/xpack-security-secure-saved-objects.html), but if you guys find docs on this, PLEASE send them to me because I cannot find many examples for this property.
+Some of these properties are very self explanatory and others are not the case. The `server.publicBaseUrl` property is our IP and Kibana port number (5601), which specifies where Kibana is available; basically our SIEM UI. The `xpack` bits are all for securing Elasticsearch. The `xpack.encryptedSavedObjects.encryptionKey` property is for creating an encryption key to encrypt and decrypt sensitive Kibana entities like dashboards, alerts, etc. We use the default specified by [Elastic](https://www.elastic.co/guide/en/kibana/current/xpack-security-secure-saved-objects.html), but if you guys find docs on this, PLEASE send them to me because I cannot find many examples for configuring this property.
 
-The rather confusing matter in all of this is specifying the `elasticsearch.ssl.key/certificate` properties with our kibana key/certificate. Initially, I was very confused on why we (the LevelEffect Guide linked in Sources) was using the Kibana certificate and key here, but the answer is LITERALLY in the YML file comments. We are SENDING the Kibana certificate and key TO Elasticsearch to VERIFY our identity as Kibana. That is it. And here I was, scrabbling in the dirt for 10 minutes trying to find an answer xD
+The rather confusing matter in all of this is specifying the `elasticsearch.ssl.key/certificate` properties with our Kibana key/certificate. Initially, I was very confused on why we (the LevelEffect Guide linked in Sources) was using the Kibana certificate and key here, but the answer is LITERALLY in the YML file comments. We are SENDING the Kibana certificate and key to Elasticsearch to verify our identity as Kibana. That is it.
 
-Anyways, remember to replace the `10.0.2.15` with your host IPs from before. Save and exit, then open the `elasticsearch.yml` configuration file in `/etc/elasticsearch/` and paste the following to the bottom of your YML file:
+Anyways, remember to replace the `10.0.2.15` with your host IPs from before. Save and exit, then open the `elasticsearch.yml` configuration file in `/etc/elasticsearch/` as we did with our `kibana.yml` file and paste the following to the bottom of your YML file:
 
 ```
 xpack.security.enabled: true
@@ -331,17 +324,15 @@ Save and exit as usual, and we are ready to load our new configurations to offic
 1. `sudo systemctl restart elasticsearch`
 2. `sudo systemctl restart kibana`
 
-If you're not like me and had a typo in their `elasticsearch.yml` config and panicked whem everything blew up in my face for like 10 minutes (I forgot to specify the SSL CERTIFICATE BRO), you should have everything running just fine. Run `sudo systemctl status <elasticsearch or kibana>` if you wanna check the status of either service, though we can be certain they are running at the moment.
+Run `sudo systemctl status <elasticsearch or kibana>` if you wanna check the status of either service, though we can be certain they are running at the moment. If anything is amiss, let is be known that the logs for Elasticsearch and Kibana are stored in `/var/log/[elasticsearch or kibana]/[home-lab.log or kibana.log]` respectively.
 
 We don't need `filebeat` running for this next step. Our last check to ensure everything is in order is to `curl` the HTTPS host for Elasticsearch, which in my case is: `curl --get https://10.0.2.15:9200`. Replace your IP as needed, anddd....
 ![Erm... What?](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/curl-fail.png)
 
-"Nubb you damn fraud, this don't work! I quit!!!!!"
-
-<strong>Noooooooooooo!</strong> Firstly, don't quit easy like that. Secondly, the reason why `curl` failed like this is because our browser does not trust the certificate just yet, or rather, the CA. We can bypass this temporarily and just add the `--insecure` parameter to end of our `curl` command and pipe the output to `jq` to make it nice and pretty as JSON format: `curl --get https://10.0.2.15:9200 --insecure | jq`.
+Before you call me a fraud, let me explain! The reason why `curl` failed like this is because our browser does not trust the certificate just yet, or rather, the CA. We can bypass this temporarily and just add the `--insecure` parameter to end of our `curl` command and pipe the output to `jq` to make it nice and pretty as JSON format: `curl --get https://10.0.2.15:9200 --insecure | jq`.
 ![Yippee!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/curl-success.png)
 
-Nice, we at least got something! To summarize this output, we require credential to log into Elasticsearch, which we will generate in the next step of our guide. But for now, go ahead and pat yourself on the back; we've got SSL running and security enabled! One step closer to a real homelab setup. We can stop our services by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`. 
+Nice, we at least got something! To summarize this output, we require credentials to log into Elasticsearch, which we will generate in the next step of our guide. But for now, go ahead and pat yourself on the back; we've got SSL running and security enabled! One step closer to a real homelab setup. We can stop our services by running `sudo systemctl stop kibana` then `sudo systemctl stop elasticsearch`. 
 
 # Generating Authentication Credentials For Elasticsearch
 To generate credentials, we will use the [elasticsearch-setup-passwords](https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-passwords.html) utility to do so. Documentation is hyperlinked as always for your reading. Simply put, the utility will generate passwords for a cluster and connect via HTTPS using our previously defined `xpack.security.http.ssl` in our `elasticsearch.yml` file. 
@@ -350,14 +341,12 @@ Run `sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto` to ra
 
 We only need the `kibana_system` password as Kibana authenticates through Elasticsearch and thus grants access to the frontend UI. <strong>However,</strong> we will need to create our own user with prvilieges to login to the SIEM frontend after we initially login using the <strong>`elastic` superuser</strong>. It's credentials will be `elastic` as its username and `<generated_password>` from the previous step when we generated new passwords.
 
-Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Change the `elasticsearch.password` to the password we just generated and <strong>DO NOT CHANGE THE `elasticsearch.username` PROPERTY. You will get error logs back when the server attempts to launch to host the frontend!</strong>
+Open the `kibana.yml` file in `/etc/kibana/` with a text editor and find the `elasticsearch.username` and `elasticsearch.password` properties. Uncomment both properties and change the `elasticsearch.password` to the password we just generated and <strong>DO NOT CHANGE THE `elasticsearch.username` PROPERTY. You will get error logs back when the server attempts to launch to host the frontend!</strong>
 
 Save and exit our YML config file and restart Kibana so that our new configuration settings are read properly with `sudo systemctl restart kibana && sudo systemctl restart elasticsearch`.
 
-And with that, we are ready to log into our SIEM frontend for the first time!
-
 # Logging into Elastic
-Firstly, start up Elasticsearch and Kibana if you haven't already with `sudo systemctl start elasticsearch`, `sudo systemctl start kibana` and `sudo systemctl start filebeat`. The fun part starts now.
+Firstly, start up all of our services if you haven't already with `sudo systemctl start elasticsearch`, `sudo systemctl start kibana` and `sudo systemctl start filebeat`. The fun part starts now.
 
 Secondly, we can't actually access our frontend just yet. We actually need to create a port forwarding rule, Fun fact, `10.0.2.15:5601` is hosted on the SERVER, but not publicly accessible to US. We need to redirect, or otherwise, <strong>forward</strong>, the traffic to us so we can recieve it.
 
@@ -368,7 +357,7 @@ Open your Network settings as we did long ago to configure SSH's port forwaring.
 - Guest IP: `YOUR_KIBANA_IP`
 - Guest Port: 5601
 
-`YOUR_KIBANA_IP` is the IP you are hosting the Kibana server on, which is shown in both Kibana's log files and the `kibana.yml` configuration. Once you've created the rule, you can attempt to head to your frontend in your web browser at `https://127.0.0.1:5601` if your VM is powered on and your services are running.
+`YOUR_KIBANA_IP` is the IP you are hosting the Kibana server on, which is shown in both Kibana's log files and the `kibana.yml` configuration. **Once you've created the rule, you can attempt to head to your frontend in your web browser at `https://127.0.0.1:5601`** if your VM is powered on and your services are running.
 ![Waiting....](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/frontend-loading.png)
 
 The loading may take a while; just be patient...
@@ -376,8 +365,6 @@ The loading may take a while; just be patient...
 
 Now we login using our <strong>`elastic` superuser credentials</strong> and NOT the `kibana_system` user.
 ![IT WORKED!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-login-success.png)
-
-Many hours, days, a VM restart, and many sweaty, hair-pulling moments have finally led both me and <strong>you</strong> to this moment! We have a frontend!
 
 # Intermission: Creating Our Own User
 Click the `Explore on my own` button to continue to the Elastic UI. Once we're in, our sole goal is to create an admin user for ourself, so that we don't need to log in to the `elastic` superuser every time.
@@ -395,7 +382,7 @@ Click the `Create User` button, and set up the credentials as needed. <strong>Fo
 More information about privileges can be found [here in the Elastic Docs!](https://www.elastic.co/guide/en/elasticsearch/reference/current/built-in-roles.html) To ensure that our account actually works, we will attempt to login to it on the Elastic login page. Logout then log back in using our new user.
 ![Nice!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/new-user-success.png)
 
-We are now ready to move on! If we ever need to modify our account privileges, we will simply login using the `elastic` superuser again and modify our roles as needed.
+If we ever need to modify our account privileges, we will simply login using the `elastic` superuser again and modify our roles as needed.
 
 # Understanding Fleet and Creating a Fleet Server
 Open the hamburger menu of the left of our UI and scroll to `Management` and click `Fleet`. 
