@@ -112,12 +112,12 @@ Because I am such a nice guy, I have left a script on this repo that can do all 
 This step is optional for setting up SSH. If we want to SSH onto our VM, we'll require a port forwarding rule such that TCP traffic from the host machine is directed to the VM at port 22 (SSH port).
 
 Go to `File` --> `Tools` --> `Network Manager` --> `NAT Networks` --> `Port Forwarding`. Click the small green button and add the following properties to the rule:
-Name: [Whatever name you want]
-Protocol: TCP
-Host IP: 127.0.01
-Host Port: [any port to specify with SSH]
-Guest IP: [Your server's IP, check with `ip addr`]
-Guest Port: 22
+- Name: [Whatever name you want]
+- Protocol: TCP
+- Host IP: 127.0.01
+- Host Port: [any port to specify with SSH]
+- Guest IP: [Your server's IP, check with `ip addr`]
+- Guest Port: 22
 
 With this rule, we can SSH from our host machine onto the VM using `ssh -p [IP set for host port] [server username]@[server hostname]`. 
 
@@ -132,7 +132,7 @@ Run `wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-ke
 
 ![GPG and repo added!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/gpg-repo-success.png)
 
-We can now install the Elasticsearch service. Run `sudo apt install elasticsearch`.
+Run `sudo apt update` to update our package lists and now we are ready to install the Elasticsearch service. Run `sudo apt install elasticsearch`.
 
 Now that Elasticsearch is installed, we need to reload all running daemons and services on our VM. Since we are adding a new service (Elasticsearch), this is necessary. It wasn't needed for SSH since we changed nothing with configuration files, and configuration is already handled by apt (to my knowledge) but for Elasticsearch, we will be modifying our configuration files. Run `sudo systemctl daemon-reload` to do so. 
 
@@ -150,9 +150,7 @@ Open `/etc/elasticsearch/elasticsearch.yml` in vim using `sudo vim /etc/elastics
 
 Continue editing the file. The `network.host` property will be our VM's IP address. The `http.port` property will be left alone, **but make sure to uncomment it**, and lastly, add the `discovery.type: single-node` property (this property tells Elasticsearch how it should form a cluster). **Do not forget the colon next to the property name!** 
 
-Once we are done, go ahead and close the YML file. Congrats, our config work here is done (temporarily)! We can now go ahead and start the `elasticsearch.service` service, then check the JSON output of Elasticsearch at our IP address + HTTP port--you'll see what I mean :)
-
-Run `sudo systemctl start elasticsearch` and wait a lil for the command to complete. We can also run `sudo systemctl enable elasticsearch` to automatically start the service on boot of our VM, if you wish. Once the command completes, run `curl --get http://NETWORK_HOST_IP:9200`. NETWORK_HOST_IP is the network.host IP we have in our config file!
+Save and exit then run `sudo systemctl start elasticsearch` to start the service. Wait a lil for the command to complete. We can also run `sudo systemctl enable elasticsearch` to automatically start the service on boot of our VM, **which is recommended.** Once the command completes, run `curl --get http://NETWORK_HOST_IP:9200`. NETWORK_HOST_IP is the network.host IP we have in our config file!
 ![We got something!!!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elasticsearch-curl-success.png)
 
 Congratulations, we just set up Elasticsearch and can confirm that a cluster is up and running. Port 9200 is where we will send all of our logged data to; from Beats or Elastic Agents if you go down that route. Our next step is setting up Kibana in the same manner.
@@ -222,7 +220,7 @@ Replace the `10.0.2.15` with your appropriate host IP. You may be wondering what
 Save the file and exit our text editor. Our next step is to literally create a PKI (Public Key Infrastructure) for ourselves. To do so, we will need keys and certificates, and of course, a certificate authority, which we will make using Elasticsearch's utilities.
 
 # Creating the CA and Generating Certificates
-Navigate to `/usr/share/elasticsearch` and run the following: `bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 
+Navigate to `/usr/share/elasticsearch` and run the following: `sudo bin/elasticsearch-certutil ca --pem`. Elasticsearch-certutil will aid use with creating basic [X.509](https://www.techtarget.com/searchsecurity/definition/X509-certificate) certificates as well as signing them. The `ca --pem` bit will 
 1) Create a new CA
 2) Create the CA certificate and private key in PEM format, as the command output will say. 
 ![Running the command and seeing the output!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-certutil-success.png)
