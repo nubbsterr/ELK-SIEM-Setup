@@ -2,6 +2,12 @@
 A guide for building your own SIEM using the Elasticsearch, Beats, and Kibana, and how to simulate, analyze and triage attacks for a homelab. Courtesy of the internet and other sources.
 
 # Preface And Shoutouts
+> [!CAUTION]
+> Since my thinkpad (running this project) died on me, I've been trying to get everything going on my desktop PC. I am at the Elastic agent enrollment phase but am facing a lot of trouble and issues. I'm uncertain why; I probably missed some configuration step and thus messed up certificates or something of the like. I leave it to my friends to try this project for themselves because I personally won't bang my head against the wall trying to diagnose random `Security Exception` error messages that I have never seen before. If you do find issues or fixes with this project, please DM me on Discord @ nubbieeee.
+
+> [!IMPORTANT]
+> You can use VMware to set up this entire lab. I would actually recommend it if you have access to the software since VirtualBox Shared Clipboard doesn't work even with Guest Additions installed, from my experience at least. Your next best option is using SSH so you can copy commands from your host "onto" the VM.
+
 <strong>Big</strong> thank you to all of the lovely sources on the internet. I am not one to shy away from reading documentation but this kind of project is virutally impossible for me given my limited knowledge of the Elastic services.
 
 This guide is aimed to be very step-by-step oriented; my goal is to guide you through everything as well as I can. If you do have questions, feel free to message me on Discord (nubbieeee) or email me (sherm5344@gmail.com)! Also massive shoutout to [crin](https://www.youtube.com/@basedtutorials/videos) for getting <strong>me</strong> properly started in cybersec. Without him, I would probably be aimlessly doing programming projects or frying my ESP32. 
@@ -402,14 +408,15 @@ Given that this is a tarball, we will need to extract its contents with the foll
 
 `sudo tar -xvf ./elastic-agent-7.17.6-linux-x86_64.tar.gz`
 
-Once that's done, we can delete the original tarball if we wish. Return back to our frontend. `cd` into `elastic-agent-7.17.6-linux-x86_64`. Now it's time to run the below commands to start our Fleet server, as shown on the frontend:
+Once that's done, we can delete the original tarball if we wish. Return back to our frontend and generate a service token by clicking the big blue button.
 
+`cd` into `elastic-agent-7.17.6-linux-x86_64`. Now it's time to run the below commands to start our Fleet server, as shown on the frontend:
 ```
 sudo ./elastic-agent install --url=https://10.0.2.15:8220 \
-  --fleet-server-es=https://10.0.2.15:9200 \
+  --fleet-server-es=http://localhost:9200 \
   --fleet-server-service-token=YOUR_SERVICE_TOKEN \
   --fleet-server-policy=499b5aa7-d214-5b5d-838b-3cd76469844e \
-  --certificate-authorities="/etc/fleet/certs/ca/ca,crt" \
+  --certificate-authorities="/etc/fleet/certs/ca/ca.crt" \
   --fleet-server-es-ca="/etc/elasticsearch/certs/elasticsearch.crt" \
   --fleet-server-cert="/etc/fleet/certs/fleet.crt" \
   --fleet-server-cert-key="/etc/fleet/certs/fleet.key"
@@ -418,8 +425,6 @@ sudo ./elastic-agent install --url=https://10.0.2.15:8220 \
 I recommened pasting that entire command into a separate notepad and editting it; change the IP to match your Fleet server IP that we set earlier as well as the Elasticsearch IP and input your service token from before to replace `YOUR_SERVICE_TOKEN` in the above command. Paste the entire command into your terminal and hit Enter!
 ![Yatta!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/elastic-agent-success.png)
 ![Yippee!](https://github.com/nubbsterr/ELK-SIEM-Setup/blob/main/screenshots/fleet-server-success.png)
-
-I had to restore my VM many times to snapshots because I made various typos that invalidated the server setup, but still installed the Agent. Simply put, I couldn't revert anything. <strong>Don't do that :)</strong>
 
 You will notice that we are able to upgrade our Fleet server, however I am not sure if that requires upgrades to our other services at this time. You may go ahead and attempt to upgrade the service but make snapshots and take your time!
 
